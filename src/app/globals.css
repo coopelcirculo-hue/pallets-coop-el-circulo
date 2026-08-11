@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/*
+  Tema claro fijo a propósito: la tablet se usa en planta, con luz fuerte.
+  El modo oscuro automático bajaba el contraste y hacía difícil leer los kilos.
+*/
+html {
+  color-scheme: light;
+}
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
+}

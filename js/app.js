@@ -17,7 +17,8 @@
   function Sistema() {
     const [sesion, setSesion] = useState(null);
     const [nombre, setNombre] = useState("");
-    const [activa, setActiva] = useState("configuracion");
+    // Arranca en "Nuevo pallet": es lo que se usa todo el día.
+    const [activa, setActiva] = useState("nuevo");
 
     useEffect(() => {
       window.App.auth.exigirSesion().then(async (s) => {
@@ -46,13 +47,7 @@
             />
           );
         case "nuevo":
-          return (
-            <Pendiente
-              titulo="📦 Nuevo pallet"
-              etapa={4}
-              descripcion="Carga de cliente, operario, máquina, turno y productos, con peso total automático."
-            />
-          );
+          return <window.App.PantallaNuevoPallet />;
         case "historial":
           return (
             <Pendiente

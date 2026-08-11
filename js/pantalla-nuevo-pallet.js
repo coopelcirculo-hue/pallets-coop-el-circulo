@@ -33,6 +33,8 @@ window.App = window.App || {};
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState("");
     const [creado, setCreado] = useState(null);
+    // { estado: "enviando" | "ok" | "error", mensaje, zpl, disenio }
+    const [impresion, setImpresion] = useState(null);
 
     /* --- Carga inicial de los desplegables ------------------------------- */
 
@@ -200,12 +202,39 @@ window.App = window.App || {};
       }
 
       setCreado(data);
+      imprimir(data); // el pallet ya está guardado; la impresión va aparte
+    }
+
+    /**
+     * Manda la etiqueta. Se llama sola después de crear, y también con el
+     * botón "Reintentar". Nunca puede hacer perder el pallet: si falla, el
+     * registro ya está y queda el ZPL para bajar a mano.
+     */
+    async function imprimir(pallet, reintentando) {
+      setImpresion({ estado: "enviando" });
+      try {
+        // Al reintentar se vuelve a buscar Browser Print: puede que lo hayan
+        // abierto recién, o enchufado la impresora.
+        const r = await window.App.impresora.imprimirPallet(pallet.id, {
+          reintentarDeteccion: !!reintentando,
+        });
+        setImpresion({
+          estado: r.ok ? "ok" : "error",
+          mensaje: r.mensaje,
+          zpl: r.zpl,
+          disenio: r.disenio,
+          impresora: r.impresora,
+        });
+      } catch (e) {
+        setImpresion({ estado: "error", mensaje: e.message });
+      }
     }
 
     function otroPallet() {
       // Se mantienen operario, máquina y turno: casi siempre es el mismo
       // durante todo el turno, y ahorra tres toques por pallet.
       setCreado(null);
+      setImpresion(null);
       setProductos([filaVacia()]);
       setObservaciones("");
       setError("");
@@ -237,21 +266,65 @@ window.App = window.App || {};
 
     // Pantalla de confirmación después de crear
     if (creado) {
+      const estado = impresion ? impresion.estado : "enviando";
+
       return (
-        <div className="panel" style={{ textAlign: "center" }}>
-          <p style={{ fontSize: 15, color: "var(--tinta-suave)", margin: 0 }}>Pallet creado</p>
-          <p style={{ fontSize: 44, fontWeight: 800, margin: "6px 0" }}>{creado.numero_pallet}</p>
-          <p style={{ fontSize: 20, margin: "0 0 6px" }}>{Number(creado.peso_total)} kg</p>
-          <span className="etiqueta-estado no">Pendiente de impresión</span>
+        <div>
+          <div className="panel" style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 15, color: "var(--tinta-suave)", margin: 0 }}>Pallet creado</p>
+            <p style={{ fontSize: 44, fontWeight: 800, margin: "6px 0" }}>
+              {creado.numero_pallet}
+            </p>
+            <p style={{ fontSize: 20, margin: "0 0 10px" }}>{Number(creado.peso_total)} kg</p>
 
-          <window.App.Aviso tipo="atencion">
-            La impresión automática se conecta en la Etapa 5. El pallet ya quedó registrado y se
-            puede imprimir después desde Reimpresión.
-          </window.App.Aviso>
+            {estado === "enviando" && <span className="etiqueta-estado no">Imprimiendo…</span>}
+            {estado === "ok" && <span className="etiqueta-estado si">Impreso ✓</span>}
+            {estado === "error" && (
+              <span className="etiqueta-estado" style={{ background: "var(--error-fondo)", color: "var(--error)" }}>
+                No se pudo imprimir
+              </span>
+            )}
 
-          <button className="boton ancho" onClick={otroPallet}>
-            Cargar otro pallet
-          </button>
+            {estado === "error" && (
+              <window.App.Aviso tipo="atencion">
+                El pallet quedó registrado igual, solo faltó la etiqueta. Podés bajar el archivo
+                y abrirlo con Print Connect, o reintentar. Detalle: {impresion.mensaje}
+              </window.App.Aviso>
+            )}
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+              <button className="boton" style={{ flex: 1 }} onClick={otroPallet}>
+                Cargar otro pallet
+              </button>
+
+              {impresion && impresion.zpl && (
+                <button
+                  className="boton secundario"
+                  onClick={() =>
+                    window.App.impresora.descargarZpl(impresion.zpl, creado.numero_pallet)
+                  }
+                >
+                  Descargar .zpl
+                </button>
+              )}
+
+              {estado === "error" && (
+                <button className="boton secundario" onClick={() => imprimir(creado, true)}>
+                  Reintentar
+                </button>
+              )}
+            </div>
+          </div>
+
+          {impresion && impresion.disenio && (
+            <div className="panel">
+              <h2>Vista previa</h2>
+              <p className="subtitulo">
+                Aproximada: sirve para ver si entra y si las medidas del formato están bien.
+              </p>
+              <window.App.VistaPrevia disenio={impresion.disenio} />
+            </div>
+          )}
         </div>
       );
     }

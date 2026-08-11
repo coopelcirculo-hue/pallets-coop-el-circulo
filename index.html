@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>Ingresar · Pallets</title>
+    <link rel="stylesheet" href="css/estilo.css" />
+  </head>
+  <body>
+    <div id="raiz">
+      <div class="cargando">Cargando…</div>
+    </div>
+
+    <!-- Librerías.
+         React 18 y no 19: la 19 dejó de publicar builds UMD.
+         Babel fijado en 7.23.2 porque versiones más nuevas rompieron antes. -->
+    <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.2/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+
+    <!-- Código propio. El orden importa: config → cliente → sesión → pantalla. -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
+    <script type="text/babel" src="js/login.js"></script>
+  </body>
+</html>

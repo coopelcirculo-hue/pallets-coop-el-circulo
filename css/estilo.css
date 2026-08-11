@@ -1,0 +1,392 @@
+/* ==========================================================================
+   Estilos del sistema de pallets.
+
+   Pensado para una tablet en planta:
+   - botones y campos grandes (mínimo 48px de alto) para tocar con guantes
+   - tema claro fijo y alto contraste, porque hay luz fuerte
+   - nada de animaciones largas: la carga tiene que sentirse instantánea
+   ========================================================================== */
+
+:root {
+  --tinta: #0f172a;
+  --tinta-suave: #475569;
+  --tinta-tenue: #94a3b8;
+  --fondo: #f1f5f9;
+  --panel: #ffffff;
+  --borde: #e2e8f0;
+  --primario: #0f172a;
+  --acento: #2563eb;
+  --ok: #059669;
+  --ok-fondo: #d1fae5;
+  --error: #dc2626;
+  --error-fondo: #fee2e2;
+  --aviso: #b45309;
+  --aviso-fondo: #fef3c7;
+  --radio: 14px;
+  --sombra: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* --- Estructura ---------------------------------------------------------- */
+
+.encabezado {
+  background: var(--primario);
+  color: #fff;
+  padding: 12px 16px;
+}
+
+.encabezado-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.marca {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-size: 18px;
+}
+
+.marca small {
+  display: block;
+  font-weight: 400;
+  font-size: 13px;
+  color: #cbd5e1;
+  letter-spacing: 0;
+}
+
+.usuario {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.nav {
+  background: var(--panel);
+  border-bottom: 1px solid var(--borde);
+  overflow-x: auto;
+}
+
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+}
+
+.nav button {
+  flex: 0 0 auto;
+  min-height: 52px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radio);
+  background: transparent;
+  color: var(--tinta-suave);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nav button:hover {
+  background: var(--fondo);
+}
+
+.nav button.activa {
+  background: var(--primario);
+  color: #fff;
+}
+
+.contenido {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* --- Paneles ------------------------------------------------------------- */
+
+.panel {
+  background: var(--panel);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.panel h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.subtitulo {
+  margin: 0 0 16px;
+  color: var(--tinta-suave);
+}
+
+/* --- Formularios --------------------------------------------------------- */
+
+.campo {
+  margin-bottom: 14px;
+}
+
+.campo label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tinta-suave);
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: 50px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--borde);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--tinta);
+  font-size: 16px; /* 16px o más: evita que iOS haga zoom al enfocar */
+  font-family: inherit;
+}
+
+textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+  border-color: var(--acento);
+}
+
+.fila {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.fila > * {
+  flex: 1 1 160px;
+}
+
+/* --- Botones ------------------------------------------------------------- */
+
+.boton {
+  min-height: 50px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--primario);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.boton:hover {
+  opacity: 0.9;
+}
+
+.boton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.boton.secundario {
+  background: var(--fondo);
+  color: var(--tinta);
+  border: 1.5px solid var(--borde);
+}
+
+.boton.peligro {
+  background: var(--error);
+}
+
+.boton.chico {
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+.boton.ancho {
+  width: 100%;
+}
+
+/* --- Tablas -------------------------------------------------------------- */
+
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--borde);
+}
+
+th {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tinta-tenue);
+}
+
+tr.inactiva td {
+  opacity: 0.45;
+}
+
+.acciones {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+/* --- Avisos -------------------------------------------------------------- */
+
+.aviso {
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 15px;
+}
+
+.aviso.ok {
+  background: var(--ok-fondo);
+  color: var(--ok);
+}
+
+.aviso.error {
+  background: var(--error-fondo);
+  color: var(--error);
+}
+
+.aviso.atencion {
+  background: var(--aviso-fondo);
+  color: var(--aviso);
+}
+
+.etiqueta-estado {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.etiqueta-estado.si {
+  background: var(--ok-fondo);
+  color: var(--ok);
+}
+
+.etiqueta-estado.no {
+  background: var(--borde);
+  color: var(--tinta-suave);
+}
+
+.vacio {
+  text-align: center;
+  padding: 28px;
+  color: var(--tinta-tenue);
+}
+
+/* --- Login --------------------------------------------------------------- */
+
+.login-pantalla {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-caja {
+  width: 100%;
+  max-width: 380px;
+  background: var(--panel);
+  border-radius: 18px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.1);
+  padding: 28px;
+}
+
+.login-titulo {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.login-titulo strong {
+  display: block;
+  font-size: 20px;
+  letter-spacing: 0.05em;
+}
+
+.login-titulo span {
+  color: var(--tinta-suave);
+  font-size: 14px;
+}
+
+/* --- Pendiente ----------------------------------------------------------- */
+
+.pendiente {
+  text-align: center;
+  padding: 40px 20px;
+  border: 2px dashed var(--borde);
+  border-radius: var(--radio);
+  background: var(--panel);
+}
+
+.pendiente .chip {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--aviso-fondo);
+  color: var(--aviso);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cargando {
+  text-align: center;
+  padding: 40px;
+  color: var(--tinta-tenue);
+}

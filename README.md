@@ -1,81 +1,91 @@
-# Pallets · Tomás Dotti
+# Pallets · Coop El Círculo
 
 Sistema web para registrar pallets de producción e imprimir la etiqueta
-identificatoria en una **Zebra ZD421** conectada por WiFi.
+identificatoria en una **Zebra ZD421**.
 
-## Arquitectura
+## Cómo funciona
 
-El navegador **nunca** habla directo con la impresora:
+Sitio **estático** (HTML + React UMD) servido por GitHub Pages, con Supabase
+como base de datos. No hay servidor propio ni costo de hosting.
 
 ```
-Tablet (navegador)
-    │  POST con los datos del pallet
-    ▼
-API Route de Next.js (en el VPS)
-    │  1. valida
-    │  2. genera número de pallet (sequence de Postgres)
-    │  3. guarda en Supabase
-    │  4. genera el ZPL
-    │  5. abre socket TCP al puerto 9100 de la Zebra
-    ▼
-Zebra imprime
+Tablet (navegador)  ──►  Supabase (datos + login)
+        │
+        └──►  Zebra Browser Print  ──►  Zebra ZD421
 ```
 
-## Stack
+El navegador no puede abrir sockets TCP, así que el ZPL no viaja directo a la
+impresora: lo pasa **Zebra Browser Print**, una app oficial de Zebra que se
+instala en la tablet y hace de puente.
 
-- **Next.js 16** (App Router, TypeScript) — frontend + API Routes
-- **Supabase** (Postgres) con RLS preparada
-- **Zebra ZD421** por socket TCP raw, puerto 9100 (ZPL)
-- Deploy en VPS propio
+## Seguridad
 
-## Puesta en marcha
+La clave que viaja en `js/config.js` es la **anon key** y es pública por
+diseño: cualquiera que abra el código fuente la ve. Lo que protege los datos
+son dos cosas, y las dos tienen que estar:
 
-```bash
-npm install
-cp .env.example .env.local   # y completar los valores
-npm run dev
-```
+1. **Row Level Security** activada en todas las tablas (scripts `003` y `005`).
+   Sin sesión iniciada no se lee ni se escribe una sola fila.
+2. **Registro público desactivado** en Supabase → *Authentication → Sign In /
+   Providers → "Allow new users to sign up"* en **off**.
 
-Abrir http://localhost:3000 — la pantalla de Inicio muestra el estado de la
-configuración. También está `GET /api/health` con el mismo dato en JSON.
+Si el registro queda abierto, cualquiera se crea una cuenta y entra al sistema.
+Los usuarios se crean a mano en *Authentication → Users*, poniéndoles
+`{ "nombre": "Juan Pérez" }` en User Metadata.
 
-## Variables de entorno
+La clave `service_role` **nunca** va en este repositorio.
 
-| Variable | Dónde se usa | Nota |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | navegador + servidor | URL del proyecto Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | navegador | clave anónima, respeta RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | **solo servidor** | saltea RLS, nunca exponerla |
-| `ZEBRA_IP` | solo servidor | IP fija de la impresora |
-| `ZEBRA_PORT` | solo servidor | 9100 (estándar Zebra) |
+## Base de datos
+
+Los scripts de `supabase/` se corren **en orden** en el SQL Editor:
+
+| Script | Qué hace |
+|---|---|
+| `001_schema.sql` | Tablas, índices y el trigger que mantiene el peso total |
+| `002_secuencia.sql` | Numerador `P-000458` |
+| `003_rls.sql` | Row Level Security |
+| `004_seed.sql` | Datos de prueba |
+| `005_formatos_etiqueta.sql` | Formatos de etiqueta (varias medidas) |
+| `006_login.sql` | Tabla de usuarios y quién cargó cada pallet |
+
+Todos son idempotentes: se pueden volver a correr sin romper nada.
 
 ## Estructura
 
 ```
-src/
-  app/
-    page.tsx              🏠 Inicio (estadísticas → Etapa 7)
-    nuevo-pallet/         📦 Carga de pallet (Etapa 4)
-    historial/            📋 Búsqueda y detalle (Etapa 6)
-    reimpresion/          🖨️ Reenvío del ZPL guardado (Etapa 6)
-    configuracion/        ⚙️ ABM clientes/operarios/máquinas (Etapa 3)
-    api/health/           chequeo de salud
-  components/             componentes de UI
-  lib/
-    env.ts                lectura y validación de variables de entorno
-    health.ts             chequeo de Supabase + impresora
-    supabase/server.ts    cliente service_role (solo servidor)
-    supabase/browser.ts   cliente anónimo (navegador, solo lecturas)
-    zebra/config.ts       IP y puerto de la impresora
-  types/db.ts             tipos del modelo de datos
+index.html      login
+app.html        el sistema (las 5 pantallas)
+css/estilo.css  estilos, pensados para tablet en planta
+js/
+  config.js                  URL y clave de Supabase
+  supabase.js                cliente
+  auth.js                    sesión, login, logout, portero
+  ui.js                      piezas compartidas
+  abm.js                     ABM genérico de las tablas maestras
+  pantalla-configuracion.js  pantalla de Configuración
+  app.js                     armazón y navegación
+supabase/       scripts SQL
+```
+
+Cada archivo de `js/` va envuelto en `(function () { ... })()`. No es adorno:
+Babel ejecuta todo en el ámbito global, y sin el envoltorio dos archivos que
+declaren `const { useState } = React` se pisan y la página no arranca.
+
+## Probar en local
+
+Hace falta un servidor: abriendo los HTML con doble clic no funciona, porque
+Babel no puede cargar los `.js` desde `file://`.
+
+```bash
+npx --yes serve .
 ```
 
 ## Estado por etapas
 
-- [x] **Etapa 1** — base del proyecto, env, clientes Supabase, navegación
-- [ ] **Etapa 2** — scripts SQL del modelo de datos + sequence + datos de prueba
-- [ ] **Etapa 3** — pantalla de Configuración (ABM)
-- [ ] **Etapa 4** — crear pallet (sin imprimir)
-- [ ] **Etapa 5** — generación de ZPL + impresión por socket TCP
-- [ ] **Etapa 6** — historial y reimpresión
-- [ ] **Etapa 7** — inicio con estadísticas del día
+- [x] **1** — base del proyecto
+- [x] **2** — base de datos, numerador y RLS
+- [x] **3** — login y pantalla de Configuración
+- [ ] **4** — crear pallet
+- [ ] **5** — generación de ZPL e impresión
+- [ ] **6** — historial y reimpresión
+- [ ] **7** — inicio con estadísticas del día

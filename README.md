@@ -47,6 +47,15 @@ Los scripts de `supabase/` se corren **en orden** en el SQL Editor:
 | `004_seed.sql` | Datos de prueba |
 | `005_formatos_etiqueta.sql` | Formatos de etiqueta (varias medidas) |
 | `006_login.sql` | Tabla de usuarios y quién cargó cada pallet |
+| `007_crear_pallet.sql` | Crea el pallet y sus productos en una sola transacción |
+| `008_dpi_de_la_impresora.sql` | El dpi pasa de cada etiqueta a la impresora |
+
+**El dpi no va por etiqueta.** Son los puntos por pulgada del cabezal térmico:
+una característica física de la impresora, que el ZD421 trae en 203 o en 300 y
+no se cambia por software. Está en la etiqueta del modelo —`ZD4A042` es 203 dpi
+y `ZD4A043` es 300— y también en el reporte de configuración. Lo que sí cambia
+por etiqueta es el tamaño. Si el dpi está mal cargado, todo se imprime a otra
+escala: un diseño de 100 mm sale de unos 68 mm.
 
 Todos son idempotentes: se pueden volver a correr sin romper nada.
 
@@ -88,7 +97,10 @@ npx --yes serve .
 - [x] **4** — crear pallet
 - [x] **5** — generación de ZPL e impresión
 - [x] **6** — historial y reimpresión
-- [ ] **7** — inicio con estadísticas del día
+- [x] **7** — inicio con estadísticas del día
+
+Queda pendiente (etapa 8, a futuro): mover la impresión y el reporte diario a
+n8n, exportar a Excel/PDF y reportes por cliente, operario y máquina.
 
 ## Si la app deja de andar de golpe
 

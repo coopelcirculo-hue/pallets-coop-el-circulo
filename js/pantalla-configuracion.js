@@ -42,6 +42,7 @@
           marca_principal: (datos.marca_principal || "").trim(),
           marca_secundaria: (datos.marca_secundaria || "").trim() || null,
           nombre_impresora: (datos.nombre_impresora || "").trim() || null,
+          impresora_dpi: Number(datos.impresora_dpi) || 203,
           actualizado_en: new Date().toISOString(),
         })
         .eq("id", 1);
@@ -63,10 +64,10 @@
 
     return (
       <form className="panel" onSubmit={guardar}>
-        <h2>Marca de la etiqueta</h2>
+        <h2>Marca e impresora</h2>
         <p className="subtitulo">
-          Lo que sale impreso arriba de todo. Se puede cambiar cuando quieran, sin tocar el
-          sistema.
+          La marca es lo que sale impreso arriba de todo. Se puede cambiar cuando quieran, sin
+          tocar el sistema.
         </p>
 
         <window.App.Aviso tipo="error">{error}</window.App.Aviso>
@@ -93,13 +94,31 @@
           </div>
         </div>
 
-        <div className="campo">
-          <label>Nombre de la impresora</label>
-          <input
-            value={datos.nombre_impresora || ""}
-            onChange={(e) => campo("nombre_impresora", e.target.value)}
-            placeholder="El que muestra Zebra Browser Print"
-          />
+        <div className="fila">
+          <div className="campo">
+            <label>Nombre de la impresora</label>
+            <input
+              value={datos.nombre_impresora || ""}
+              onChange={(e) => campo("nombre_impresora", e.target.value)}
+              placeholder="El que muestra Zebra Browser Print"
+            />
+          </div>
+
+          <div className="campo">
+            <label>Resolución del cabezal (dpi)</label>
+            <select
+              value={datos.impresora_dpi || 203}
+              onChange={(e) => campo("impresora_dpi", e.target.value)}
+            >
+              <option value="203">203 dpi</option>
+              <option value="300">300 dpi</option>
+            </select>
+            <p className="subtitulo" style={{ margin: "6px 0 0", fontSize: 13 }}>
+              Es de la impresora, no de la etiqueta. Está en la etiqueta del modelo:
+              ZD4A<strong>042</strong> es 203 dpi y ZD4A<strong>043</strong> es 300 dpi. Si te
+              equivocás, todo sale impreso a otra escala.
+            </p>
+          </div>
         </div>
 
         <button className="boton" type="submit" disabled={guardando}>
@@ -258,21 +277,12 @@
 
         <Abm
           titulo="Formatos de etiqueta"
-          descripcion="Las medidas reales de cada etiqueta que tengan en planta. El dpi sale del reporte de configuración de la impresora."
+          descripcion="Las medidas reales de cada etiqueta que tengan en planta, medidas con una regla."
           tabla="formatos_etiqueta"
           campos={[
             { nombre: "nombre", etiqueta: "Nombre", tipo: "texto", requerido: true },
             { nombre: "ancho_mm", etiqueta: "Ancho (mm)", tipo: "numero", requerido: true },
             { nombre: "alto_mm", etiqueta: "Alto (mm)", tipo: "numero", requerido: true },
-            {
-              nombre: "dpi",
-              etiqueta: "DPI",
-              tipo: "select",
-              numerico: true,
-              opciones: ["203", "300"],
-              porDefecto: "203",
-              requerido: true,
-            },
           ]}
           extras={{
             titulo: "Por defecto",

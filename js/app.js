@@ -39,13 +39,8 @@
         case "configuracion":
           return <window.App.PantallaConfiguracion />;
         case "inicio":
-          return (
-            <Pendiente
-              titulo="🏠 Inicio"
-              etapa={7}
-              descripcion="Pallets del día, kilos totales, operario y máquina con más producción."
-            />
-          );
+          // irA deja que Inicio mande al encargado a otra pantalla de un toque.
+          return <window.App.PantallaInicio irA={setActiva} />;
         case "nuevo":
           return <window.App.PantallaNuevoPallet />;
         case "historial":

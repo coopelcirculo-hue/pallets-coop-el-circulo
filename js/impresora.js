@@ -203,6 +203,10 @@ window.App = window.App || {};
       throw new Error("No hay ningún formato de etiqueta cargado. Andá a Configuración.");
     }
 
+    // El dpi es del cabezal de la impresora, no de la etiqueta: sale de la
+    // configuración general y se le pega al formato para armar el ZPL.
+    formato = { ...formato, dpi: (config && config.impresora_dpi) || 203 };
+
     const datos = window.App.zpl.datosDeEtiqueta(pallet, productos, config, {
       cliente: pallet.clientes && pallet.clientes.nombre,
       // En la etiqueta va la inicial del operario, que es lo que usan en planta.

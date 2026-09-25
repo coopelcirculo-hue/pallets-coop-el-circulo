@@ -49,21 +49,9 @@
         case "nuevo":
           return <window.App.PantallaNuevoPallet />;
         case "historial":
-          return (
-            <Pendiente
-              titulo="📋 Historial"
-              etapa={6}
-              descripcion="Buscador por número, detalle, edición de observaciones y reimpresión."
-            />
-          );
+          return <window.App.PantallaHistorial />;
         case "reimpresion":
-          return (
-            <Pendiente
-              titulo="🖨️ Reimpresión"
-              etapa={6}
-              descripcion="Buscar un pallet y volver a mandar a la Zebra la misma etiqueta."
-            />
-          );
+          return <window.App.PantallaReimpresion />;
         default:
           return null;
       }

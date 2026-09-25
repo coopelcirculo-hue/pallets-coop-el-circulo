@@ -85,7 +85,14 @@ npx --yes serve .
 - [x] **1** — base del proyecto
 - [x] **2** — base de datos, numerador y RLS
 - [x] **3** — login y pantalla de Configuración
-- [ ] **4** — crear pallet
-- [ ] **5** — generación de ZPL e impresión
-- [ ] **6** — historial y reimpresión
+- [x] **4** — crear pallet
+- [x] **5** — generación de ZPL e impresión
+- [x] **6** — historial y reimpresión
 - [ ] **7** — inicio con estadísticas del día
+
+## Si la app deja de andar de golpe
+
+Lo primero que hay que mirar es si el proyecto de Supabase está **pausado**: el
+plan free los pausa tras una semana sin uso. Cuando eso pasa, el dominio deja de
+resolver y parece que el proyecto se borró, pero no: se restaura desde el panel
+con el botón **Restore**, conservando datos, URL y claves.

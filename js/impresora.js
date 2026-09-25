@@ -272,9 +272,123 @@ window.App = window.App || {};
     return { ok: false, zpl, disenio, mensaje };
   }
 
+  /* =====================================================================
+     Bobinas
+
+     La maquinaria de mandar, reintentar y registrar es la misma que la de
+     los pallets; lo único distinto es de dónde salen los datos y cómo se
+     arma la etiqueta.
+     ===================================================================== */
+
+  /** Cambia el estado de impresión de una bobina. */
+  async function cambiarEstadoBobina(bobinaId, estado, zpl) {
+    const cambios = { estado_impresion: estado };
+    if (zpl) cambios.zpl_generado = zpl;
+    await window.App.db.from("bobinas").update(cambios).eq("id", bobinaId);
+  }
+
+  async function registrarBobina(bobinaId, resultado, detalle, esReimpresion) {
+    try {
+      await window.App.db.from("impresiones").insert({
+        bobina_id: bobinaId,
+        resultado,
+        detalle: detalle ? String(detalle).slice(0, 500) : null,
+        dispositivo: nombreDispositivo(),
+        es_reimpresion: !!esReimpresion,
+      });
+    } catch (e) {
+      console.warn("No se pudo registrar la impresión:", e);
+    }
+  }
+
+  /** Trae todo lo necesario para armar la etiqueta de una bobina. */
+  async function datosParaEtiquetaBobina(bobinaId) {
+    const db = window.App.db;
+
+    const { data: bobina, error } = await db
+      .from("bobinas")
+      .select("*, maquinas(nombre, numero), operarios(nombre, iniciales)")
+      .eq("id", bobinaId)
+      .single();
+
+    if (error) throw new Error(window.App.ui.mensajeDeError(error));
+
+    const [{ data: config }, { data: formato }] = await Promise.all([
+      db.from("configuracion").select("*").eq("id", 1).maybeSingle(),
+      db
+        .from("formatos_etiqueta")
+        .select("*")
+        .eq("predeterminado", true)
+        .maybeSingle(),
+    ]);
+
+    if (!formato) {
+      throw new Error("No hay ningún formato de etiqueta cargado. Andá a Configuración.");
+    }
+
+    const conDpi = { ...formato, dpi: (config && config.impresora_dpi) || 203 };
+
+    const datos = window.App.zplBobina.datosDeBobina(bobina, config, {
+      // En la etiqueta va el número de máquina, que es como la nombran en planta.
+      maquina:
+        bobina.maquinas && bobina.maquinas.numero !== null
+          ? String(bobina.maquinas.numero).padStart(2, "0")
+          : (bobina.maquinas && bobina.maquinas.nombre) || "",
+      operario: bobina.operarios && (bobina.operarios.iniciales || bobina.operarios.nombre),
+    });
+
+    return { bobina, formato: conDpi, datos };
+  }
+
+  /** Imprime una bobina de punta a punta. Misma lógica que los pallets. */
+  async function imprimirBobina(bobinaId, opciones) {
+    const config = opciones || {};
+    const esReimpresion = !!config.esReimpresion;
+
+    const { bobina, formato, datos } = await datosParaEtiquetaBobina(bobinaId);
+
+    // Al reimprimir se reusa el ZPL guardado: la etiqueta tiene que salir
+    // igual a la original, aunque hoy la corrida de esa máquina sea otra.
+    let zpl, disenio;
+    if (esReimpresion && bobina.zpl_generado) {
+      zpl = bobina.zpl_generado;
+      disenio = window.App.zplBobina.calcularDisenioBobina(datos, formato);
+    } else {
+      const generado = window.App.zplBobina.generar(datos, formato);
+      zpl = generado.zpl;
+      disenio = generado.disenio;
+    }
+
+    await cambiarEstadoBobina(bobinaId, "imprimiendo", zpl);
+
+    if (config.reintentarDeteccion) olvidarDeteccion();
+
+    let ultimoError = null;
+    for (let intento = 1; intento <= INTENTOS; intento++) {
+      try {
+        const impresora = await enviarPorBrowserPrint(zpl);
+        await cambiarEstadoBobina(bobinaId, "impreso");
+        await registrarBobina(bobinaId, "ok", "Enviado a " + impresora, esReimpresion);
+        return { ok: true, zpl, disenio, impresora };
+      } catch (e) {
+        ultimoError = e;
+        if (e.sinBrowserPrint) break;
+        if (intento < INTENTOS) await dormir(ESPERA_MS);
+      }
+    }
+
+    const mensaje = ultimoError ? ultimoError.message : "No se pudo imprimir.";
+    await cambiarEstadoBobina(bobinaId, "error");
+    await registrarBobina(bobinaId, "error", mensaje, esReimpresion);
+
+    return { ok: false, zpl, disenio, mensaje };
+  }
+
   window.App.impresora = {
     buscarImpresora,
     olvidarDeteccion,
+    datosParaEtiquetaBobina,
+    imprimirBobina,
     enviarPorBrowserPrint,
     descargarZpl,
     datosParaEtiqueta,

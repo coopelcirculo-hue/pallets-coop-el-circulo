@@ -6,9 +6,16 @@
 (function () {
   const { useState, useEffect } = React;
 
+  /*
+    "Nuevo pallet" no está en la lista a propósito: el pallet dejó de ser una
+    lista de productos sueltos y pasa a ser un conjunto de bobinas. Vuelve en
+    la Etapa 9, ya con el flujo correcto. No quiero dejar una pantalla que
+    hace algo que ya no se usa.
+  */
   const PANTALLAS = [
     { id: "inicio", icono: "🏠", texto: "Inicio" },
-    { id: "nuevo", icono: "📦", texto: "Nuevo pallet" },
+    { id: "bobina", icono: "🧵", texto: "Nueva bobina" },
+    { id: "maquinas", icono: "🛠️", texto: "Máquinas" },
     { id: "historial", icono: "📋", texto: "Historial" },
     { id: "reimpresion", icono: "🖨️", texto: "Reimpresión" },
     { id: "configuracion", icono: "⚙️", texto: "Configuración" },
@@ -17,8 +24,8 @@
   function Sistema() {
     const [sesion, setSesion] = useState(null);
     const [nombre, setNombre] = useState("");
-    // Arranca en "Nuevo pallet": es lo que se usa todo el día.
-    const [activa, setActiva] = useState("nuevo");
+    // Arranca en "Nueva bobina": es lo que se usa todo el día.
+    const [activa, setActiva] = useState("bobina");
 
     useEffect(() => {
       window.App.auth.exigirSesion().then(async (s) => {
@@ -41,12 +48,14 @@
         case "inicio":
           // irA deja que Inicio mande al encargado a otra pantalla de un toque.
           return <window.App.PantallaInicio irA={setActiva} />;
-        case "nuevo":
-          return <window.App.PantallaNuevoPallet />;
+        case "bobina":
+          return <window.App.PantallaNuevaBobina />;
+        case "maquinas":
+          return <window.App.PantallaMaquinas />;
         case "historial":
-          return <window.App.PantallaHistorial />;
+          return <window.App.PantallaHistorialBobinas />;
         case "reimpresion":
-          return <window.App.PantallaReimpresion />;
+          return <window.App.PantallaReimpresionBobinas />;
         default:
           return null;
       }
@@ -57,8 +66,8 @@
         <header className="encabezado">
           <div className="encabezado-inner">
             <div className="marca">
-              PALLETS
-              <small>Registro de producción</small>
+              PRODUCCIÓN
+              <small>Bobinas y etiquetas</small>
             </div>
             <div className="usuario">
               <span>{nombre || sesion.user.email}</span>

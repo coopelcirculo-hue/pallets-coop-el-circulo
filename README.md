@@ -1,7 +1,34 @@
-# Pallets · Coop El Círculo
+# Producción · Coop El Círculo
 
-Sistema web para registrar pallets de producción e imprimir la etiqueta
-identificatoria en una **Zebra ZD421**.
+Sistema web para registrar la producción de las extrusoras e imprimir la
+etiqueta identificatoria en una **Zebra ZD421**.
+
+## El modelo: bobinas y pallets
+
+La unidad de producción es la **bobina**: lo que sale de cada extrusora, con
+**una** medida (ancho y micrones), **un** peso, **una** máquina y **un**
+operario. Es la que se etiqueta en planta.
+
+El **pallet** es otra cosa: un conjunto de bobinas que se arma después. Su
+flujo está en la Etapa 9; hasta entonces las bobinas quedan sueltas
+(`bobinas.pallet_id` en null).
+
+Cada máquina recuerda **qué está produciendo ahora** —su *corrida activa*— y
+esa medida se guarda en la base, no en la pantalla. Con más de diez extrusoras
+produciendo cosas distintas al mismo tiempo, al cargar una bobina alcanza con
+elegir la máquina y poner los kilos. Además sobrevive a recargar la página,
+cambiar de tablet y cambiar de turno.
+
+## La jornada de producción
+
+Los turnos son de 12 horas y el de noche cruza la medianoche. Por eso cada
+bobina guarda **dos fechas**: la real y la **jornada de producción**, que es el
+día en que arrancó su turno. Una bobina hecha a las 02:00 pertenece a la
+jornada del día anterior. Sin esa distinción, la producción del turno noche
+quedaría partida entre dos fechas y los resúmenes nunca cerrarían.
+
+Los horarios de los turnos se configuran en `configuracion`
+(`hora_inicio_turno_dia` y `hora_inicio_turno_noche`).
 
 ## Cómo funciona
 
@@ -49,6 +76,7 @@ Los scripts de `supabase/` se corren **en orden** en el SQL Editor:
 | `006_login.sql` | Tabla de usuarios y quién cargó cada pallet |
 | `007_crear_pallet.sql` | Crea el pallet y sus productos en una sola transacción |
 | `008_dpi_de_la_impresora.sql` | El dpi pasa de cada etiqueta a la impresora |
+| `009_bobinas.sql` | Bobinas, corridas por máquina, turnos y jornada de producción |
 
 **El dpi no va por etiqueta.** Son los puntos por pulgada del cabezal térmico:
 una característica física de la impresora, que el ZD421 trae en 203 o en 300 y
@@ -98,6 +126,8 @@ npx --yes serve .
 - [x] **5** — generación de ZPL e impresión
 - [x] **6** — historial y reimpresión
 - [x] **7** — inicio con estadísticas del día
+- [x] **8** — bobinas: corridas por máquina, carga rápida y etiqueta
+- [ ] **9** — pallets como conjuntos de bobinas
 
 Queda pendiente (etapa 8, a futuro): mover la impresión y el reporte diario a
 n8n, exportar a Excel/PDF y reportes por cliente, operario y máquina.

@@ -275,6 +275,8 @@
 
         <Marca />
 
+        <window.App.PruebaImpresora />
+
         <Abm
           titulo="Formatos de etiqueta"
           descripcion="Las medidas reales de cada etiqueta que tengan en planta, medidas con una regla."

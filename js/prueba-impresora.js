@@ -83,11 +83,28 @@ window.App = window.App || {};
         const encontrada = await window.App.impresora.buscarImpresora();
 
         if (!encontrada) {
-          pasos.push({
-            ok: false,
-            texto:
-              "Browser Print no responde en este dispositivo. Revisá que esté instalado y abierto, y que estés entrando con Chrome.",
-          });
+          // Puede ser que Browser Print no esté, o que esté pero sin ninguna
+          // impresora marcada como predeterminada. No es lo mismo.
+          const todas = await window.App.impresora.listarImpresoras();
+
+          if (todas && todas.length) {
+            pasos.push({
+              ok: false,
+              texto:
+                "Browser Print está y ve " +
+                todas.length +
+                " impresora(s) — " +
+                todas.map((d) => d.name || d.uid).join(", ") +
+                " — pero ninguna está marcada como PREDETERMINADA. Abrí Browser Print, tocá la impresora y ponela como Default.",
+            });
+          } else {
+            pasos.push({
+              ok: false,
+              texto:
+                "Browser Print no responde. Revisá que esté instalado y abierto, que entres con Chrome, y que la impresora esté agregada (por red o por Bluetooth).",
+            });
+          }
+
           setEstado({ pasos, resumen: "Browser Print no está disponible" });
           return;
         }
@@ -95,9 +112,25 @@ window.App = window.App || {};
         pasos.push({
           ok: true,
           texto:
-            "Browser Print responde. Impresora configurada: " +
+            "Browser Print responde. Impresora predeterminada: " +
             (encontrada.dispositivo.name || "sin nombre"),
         });
+
+        // Se listan todas para ver si la Zebra está cargada por Bluetooth o
+        // por red, y si hay varias cuál quedó de predeterminada.
+        const todas = await window.App.impresora.listarImpresoras();
+        if (todas && todas.length) {
+          const detalle = todas
+            .map((d) => {
+              const via = d.connection ? ` (${d.connection})` : "";
+              return (d.name || d.uid || "sin nombre") + via;
+            })
+            .join(" · ");
+          pasos.push({
+            ok: true,
+            texto: `Browser Print tiene ${todas.length} ${todas.length === 1 ? "impresora" : "impresoras"}: ${detalle}`,
+          });
+        }
 
         // Paso 3: mandar la etiqueta de prueba
         try {

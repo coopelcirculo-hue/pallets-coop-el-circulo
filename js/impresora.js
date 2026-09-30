@@ -89,6 +89,34 @@ window.App = window.App || {};
     return null;
   }
 
+  /**
+   * Lista TODO lo que Browser Print tiene configurado, sea por red o por
+   * Bluetooth. Sirve para el diagnóstico: si la impresora aparece acá, el
+   * puente funciona y solo falta marcarla como predeterminada.
+   */
+  async function listarImpresoras() {
+    for (const base of PUERTOS) {
+      try {
+        const r = await traer(base + "/available", { method: "GET" }, 3000);
+        if (!r.ok) continue;
+
+        const texto = (await r.text()).trim();
+        if (!texto) continue;
+
+        const datos = JSON.parse(texto);
+        // Según la versión devuelve un array o un objeto con la lista adentro.
+        const lista = Array.isArray(datos)
+          ? datos
+          : [].concat(datos.printer || [], datos.device || [], datos.printers || []);
+
+        return lista.filter(Boolean);
+      } catch {
+        // Ese puerto no contesta o no devolvió algo entendible.
+      }
+    }
+    return null;
+  }
+
   /** Manda el ZPL por Browser Print. Tira error si no se pudo. */
   async function enviarPorBrowserPrint(zpl) {
     const encontrada = await buscarImpresora();
@@ -386,6 +414,7 @@ window.App = window.App || {};
 
   window.App.impresora = {
     buscarImpresora,
+    listarImpresoras,
     olvidarDeteccion,
     datosParaEtiquetaBobina,
     imprimirBobina,

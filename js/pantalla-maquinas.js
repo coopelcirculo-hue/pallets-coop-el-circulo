@@ -194,6 +194,8 @@ window.App = window.App || {};
     if (!maquinas) return <div className="cargando">Cargando…</div>;
 
     const sinMedida = maquinas.filter((m) => !m.corrida);
+    // Sin número no se puede armar el número de bobina ("06-00123").
+    const sinNumero = maquinas.filter((m) => m.numero === null || m.numero === undefined);
 
     return (
       <div>
@@ -203,6 +205,14 @@ window.App = window.App || {};
             Qué está produciendo cada extrusora ahora mismo. Al cargar una bobina, la medida
             sale de acá.
           </p>
+          {sinNumero.length > 0 && (
+            <window.App.Aviso tipo="error">
+              Sin número no se pueden cargar bobinas, porque el número de máquina forma parte
+              del número de bobina. Cargáselo en Configuración a:{" "}
+              {sinNumero.map((m) => m.nombre).join(", ")}.
+            </window.App.Aviso>
+          )}
+
           {sinMedida.length > 0 && (
             <window.App.Aviso tipo="atencion">
               {sinMedida.length === 1

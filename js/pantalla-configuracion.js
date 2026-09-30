@@ -321,8 +321,19 @@
 
         <Abm
           titulo="Máquinas"
+          descripcion="El número es obligatorio: es como las nombran en planta, va impreso en la etiqueta y forma parte del número de bobina (la bobina 123 de la máquina 6 es 06-00123)."
           tabla="maquinas"
-          campos={[{ nombre: "nombre", etiqueta: "Nombre", tipo: "texto", requerido: true }]}
+          orden="numero"
+          campos={[
+            {
+              nombre: "numero",
+              etiqueta: "Número",
+              tipo: "numero",
+              paso: "1",
+              requerido: true,
+            },
+            { nombre: "nombre", etiqueta: "Nombre", tipo: "texto", requerido: true },
+          ]}
         />
       </div>
     );

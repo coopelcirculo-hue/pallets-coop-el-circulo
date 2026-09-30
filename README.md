@@ -77,6 +77,18 @@ Los scripts de `supabase/` se corren **en orden** en el SQL Editor:
 | `007_crear_pallet.sql` | Crea el pallet y sus productos en una sola transacción |
 | `008_dpi_de_la_impresora.sql` | El dpi pasa de cada etiqueta a la impresora |
 | `009_bobinas.sql` | Bobinas, corridas por máquina, turnos y jornada de producción |
+| `010_numeracion_por_maquina.sql` | Cada máquina lleva su propio conteo de bobinas |
+
+**La numeración es por máquina.** Una bobina se llama `06-00123`: bobina 123
+de la máquina 06. Sigue siendo única en todo el sistema —así se rastrea con un
+solo dato— pero el conteo de cada extrusora es independiente, que es como se
+cuenta en planta. El contador vive en `maquinas.contador_bobinas`; se
+incrementa con un `UPDATE ... RETURNING`, que bloquea la fila y por eso dos
+bobinas simultáneas de la misma máquina nunca repiten número.
+
+Por eso **el número de máquina es obligatorio**: sin él no se puede armar el
+número de bobina. Una máquina sin número no deja cargar bobinas y la pantalla
+de Máquinas la marca en rojo.
 
 **El dpi no va por etiqueta.** Son los puntos por pulgada del cabezal térmico:
 una característica física de la impresora, que el ZD421 trae en 203 o en 300 y

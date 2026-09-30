@@ -88,6 +88,13 @@ window.App = window.App || {};
       const recordados = leerOperarios();
       setOperarioId(recordados[m.id] || "");
 
+      // Sin número no se puede numerar la bobina (el número es "06-00123").
+      if (m.numero === null || m.numero === undefined) {
+        setError(
+          `La máquina "${m.nombre}" no tiene número cargado. Ponéselo en Configuración: el número forma parte del número de bobina.`,
+        );
+      }
+
       if (m.corrida) {
         setAncho(String(m.corrida.ancho_cm));
         setMicrones(String(m.corrida.micrones));
@@ -117,6 +124,9 @@ window.App = window.App || {};
 
     function validar() {
       if (!maquinaId) return "Elegí la máquina.";
+      if (maquina && (maquina.numero === null || maquina.numero === undefined)) {
+        return `La máquina "${maquina.nombre}" no tiene número. Cargáselo en Configuración.`;
+      }
       if (!operarioId) return "Elegí el operario.";
       if (!corrida && !cambiandoMedida) return "Esa máquina no tiene cargado qué está produciendo.";
       if (cambiandoMedida) return "Guardá primero la medida de la máquina.";

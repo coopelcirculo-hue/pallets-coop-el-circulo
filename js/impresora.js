@@ -335,7 +335,10 @@ window.App = window.App || {};
 
     const { data: bobina, error } = await db
       .from("bobinas")
-      .select("*, maquinas(nombre, numero), operarios(nombre, iniciales)")
+      .select(
+        "*, maquinas(nombre, numero), operarios(nombre, iniciales)," +
+          " materiales(nombre), colores(nombre)",
+      )
       .eq("id", bobinaId)
       .single();
 

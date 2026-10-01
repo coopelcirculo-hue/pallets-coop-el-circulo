@@ -96,6 +96,14 @@ window.App = window.App || {};
                     <td>{b.operarios ? b.operarios.iniciales : "—"}</td>
                     <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                       {window.App.zpl.kilosLegibles(b.kilos)} kg
+                      {b.metros && (
+                        <>
+                          <br />
+                          <span style={{ color: "var(--tinta-tenue)", fontSize: 13 }}>
+                            {window.App.zpl.kilosLegibles(b.metros)} m
+                          </span>
+                        </>
+                      )}
                     </td>
                     <td>
                       <window.App.EstadoPallet estado={b.estado_impresion} />
@@ -219,9 +227,22 @@ window.App = window.App || {};
               <p style={{ margin: 0, fontSize: 13, color: "var(--tinta-tenue)" }}>Bobina</p>
               <p style={{ margin: 0, fontSize: 32, fontWeight: 800 }}>{bobina.numero_bobina}</p>
               <p style={{ margin: 0, fontSize: 20 }}>
-                {window.App.bobinas.medida(bobina)} ·{" "}
-                <strong>{zplLib.kilosLegibles(bobina.kilos)} kg</strong>
+                {window.App.bobinas.medida(bobina)}
               </p>
+              {window.App.bobinas.materialYColor(bobina) && (
+                <p style={{ margin: 0, fontSize: 17, color: "var(--tinta-suave)" }}>
+                  {window.App.bobinas.materialYColor(bobina)}
+                </p>
+              )}
+              <p style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 700 }}>
+                {zplLib.kilosLegibles(bobina.kilos)} kg
+                {bobina.metros ? ` · ${zplLib.kilosLegibles(bobina.metros)} m` : ""}
+              </p>
+              {bobina.aditivos_texto && (
+                <p style={{ margin: "2px 0 0", fontSize: 15, color: "var(--acento)" }}>
+                  Lleva: {bobina.aditivos_texto}
+                </p>
+              )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <window.App.EstadoPallet estado={bobina.estado_impresion} />

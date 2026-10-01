@@ -21,7 +21,8 @@ window.App = window.App || {};
     alturaMarca: 5,
     alturaRotulo: 3.2, // los textos chicos tipo "MEDIDA"
     alturaMedida: 11, // el dato fundamental
-    alturaNumero: 9, // B-001234
+    alturaMaterial: 5, // material y color, debajo de la medida
+    alturaNumero: 9, // 06-00123
     alturaDatos: 4.2, // la línea de máquina / operario / turno
     alturaFecha: 3.8,
     alturaPeso: 9,
@@ -32,10 +33,13 @@ window.App = window.App || {};
     grosorLinea: 0.4,
   };
 
-  /** "45 cm · 40 µ" a partir del ancho y los micrones. */
-  function medidaLegible(anchoCm, micrones) {
+  /** "45 cm · F 8 · 40 µ" (el fuelle solo si lleva). */
+  function medidaLegible(anchoCm, micrones, anchoFuelleCm) {
     const k = window.App.zpl.kilosLegibles;
-    return `${k(anchoCm)} cm  ·  ${k(micrones)} µ`;
+    const partes = [`${k(anchoCm)} cm`];
+    if (anchoFuelleCm) partes.push(`F ${k(anchoFuelleCm)}`);
+    partes.push(`${k(micrones)} µ`);
+    return partes.join("  ·  ");
   }
 
   /**
@@ -81,11 +85,20 @@ window.App = window.App || {};
     // --- La medida: el dato más importante de la etiqueta ---
     texto("MEDIDA", { altura: D.alturaRotulo });
     y += D.alturaRotulo + D.espacioChico;
-    texto(medidaLegible(datos.anchoCm, datos.micrones), {
+    texto(medidaLegible(datos.anchoCm, datos.micrones, datos.anchoFuelleCm), {
       altura: D.alturaMedida,
       negrita: true,
     });
-    y += D.alturaMedida + D.espacioMedio;
+    y += D.alturaMedida + D.espacioChico;
+
+    // Material y color, si están cargados. Si no, no se deja el hueco.
+    const materialYColor = [datos.material, datos.color].filter(Boolean).join("  ·  ");
+    if (materialYColor) {
+      texto(materialYColor.toUpperCase(), { altura: D.alturaMaterial, negrita: true });
+      y += D.alturaMaterial;
+    }
+
+    y += D.espacioChico;
     linea();
 
     // --- Número de bobina ---
@@ -116,11 +129,18 @@ window.App = window.App || {};
     y += D.alturaFecha + D.espacioMedio;
     linea();
 
-    // --- Peso ---
+    // --- Peso, y los metros al lado si se cargaron ---
     texto(`PESO: ${zpl.kilosLegibles(datos.kilos)} kg`, {
       altura: D.alturaPeso,
       negrita: true,
     });
+    if (datos.metros) {
+      texto(`${zpl.kilosLegibles(datos.metros)} m`, {
+        altura: D.alturaPeso,
+        negrita: true,
+        alineacion: "der",
+      });
+    }
     y += D.alturaPeso + D.espacioChico;
 
     if (datos.marcaSecundaria) {
@@ -148,7 +168,11 @@ window.App = window.App || {};
       numeroBobina: bobina.numero_bobina,
       anchoCm: bobina.ancho_cm,
       micrones: bobina.micrones,
+      anchoFuelleCm: bobina.ancho_fuelle_cm,
+      material: bobina.materiales ? bobina.materiales.nombre : "",
+      color: bobina.colores ? bobina.colores.nombre : "",
       kilos: bobina.kilos,
+      metros: bobina.metros,
       maquina: nombres.maquina || "",
       operario: nombres.operario || "",
       turno: bobina.turno,

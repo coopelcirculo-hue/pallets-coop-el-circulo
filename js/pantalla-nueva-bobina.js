@@ -1,9 +1,9 @@
 /**
  * Nueva bobina: la pantalla de uso diario.
  *
- * Pensada para 10 segundos por bobina, no un minuto. Como cada máquina ya
- * recuerda qué está produciendo, el responsable elige la máquina, pone los
- * kilos y listo: la medida sale sola de la corrida activa de esa máquina.
+ * Pensada para 10 segundos por bobina. Como cada máquina ya recuerda qué está
+ * produciendo —medida, fuelle, material, color y aditivos—, el responsable
+ * elige la máquina, pone kilos y metros, y listo.
  */
 
 window.App = window.App || {};
@@ -42,11 +42,10 @@ window.App = window.App || {};
     const [maquinaId, setMaquinaId] = useState("");
     const [operarioId, setOperarioId] = useState("");
     const [kilos, setKilos] = useState("");
+    const [metros, setMetros] = useState("");
     const [observaciones, setObservaciones] = useState("");
 
-    const [cambiandoMedida, setCambiandoMedida] = useState(false);
-    const [ancho, setAncho] = useState("");
-    const [micrones, setMicrones] = useState("");
+    const [editandoProducto, setEditandoProducto] = useState(false);
 
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState("");
@@ -66,13 +65,14 @@ window.App = window.App || {};
 
     useEffect(() => {
       (async () => {
-        const [m, ops] = await Promise.all([
-          cargarMaquinas(),
-          window.App.db.from("operarios").select("id, nombre, iniciales").eq("activo", true).order("nombre"),
-        ]);
+        const ops = await window.App.db
+          .from("operarios")
+          .select("id, nombre, iniciales")
+          .eq("activo", true)
+          .order("nombre");
         if (ops.error) setErrorCarga(window.App.ui.mensajeDeError(ops.error));
         else setOperarios(ops.data || []);
-        void m;
+        await cargarMaquinas();
       })();
     }, []);
 
@@ -82,44 +82,19 @@ window.App = window.App || {};
     function elegirMaquina(m) {
       setMaquinaId(m.id);
       setError("");
-      setCambiandoMedida(false);
 
       // Se recupera el operario que venía cargando en esa máquina.
       const recordados = leerOperarios();
       setOperarioId(recordados[m.id] || "");
 
-      // Sin número no se puede numerar la bobina (el número es "06-00123").
       if (m.numero === null || m.numero === undefined) {
         setError(
           `La máquina "${m.nombre}" no tiene número cargado. Ponéselo en Configuración: el número forma parte del número de bobina.`,
         );
       }
 
-      if (m.corrida) {
-        setAncho(String(m.corrida.ancho_cm));
-        setMicrones(String(m.corrida.micrones));
-      } else {
-        // Máquina sin corrida: hay que decir qué está haciendo antes de cargar.
-        setAncho("");
-        setMicrones("");
-        setCambiandoMedida(true);
-      }
-    }
-
-    async function guardarMedida() {
-      const a = parseFloat(ancho);
-      const mic = parseFloat(micrones);
-      if (isNaN(a) || a <= 0) return setError("El ancho tiene que ser mayor a cero.");
-      if (isNaN(mic) || mic <= 0) return setError("Los micrones tienen que ser mayores a cero.");
-
-      try {
-        await window.App.bobinas.definirCorrida(maquinaId, a, mic, null);
-        await cargarMaquinas();
-        setCambiandoMedida(false);
-        setError("");
-      } catch (e) {
-        setError(e.message);
-      }
+      // Sin producto definido no se puede cargar nada: se abre el editor.
+      setEditandoProducto(!m.corrida);
     }
 
     function validar() {
@@ -127,11 +102,17 @@ window.App = window.App || {};
       if (maquina && (maquina.numero === null || maquina.numero === undefined)) {
         return `La máquina "${maquina.nombre}" no tiene número. Cargáselo en Configuración.`;
       }
+      if (!corrida) return "Esa máquina no tiene cargado qué está produciendo.";
+      if (editandoProducto) return "Guardá primero lo que está haciendo la máquina.";
       if (!operarioId) return "Elegí el operario.";
-      if (!corrida && !cambiandoMedida) return "Esa máquina no tiene cargado qué está produciendo.";
-      if (cambiandoMedida) return "Guardá primero la medida de la máquina.";
+
       const k = parseFloat(kilos);
       if (isNaN(k) || k <= 0) return "Poné los kilos de la bobina.";
+
+      if (metros !== "") {
+        const m = parseFloat(metros);
+        if (isNaN(m) || m <= 0) return "Los metros tienen que ser mayores a cero, o quedar vacíos.";
+      }
       return null;
     }
 
@@ -149,6 +130,7 @@ window.App = window.App || {};
           maquinaId,
           operarioId,
           kilos: parseFloat(kilos),
+          metros: metros === "" ? null : parseFloat(metros),
           observaciones,
         });
         guardarOperario(maquinaId, operarioId);
@@ -178,11 +160,12 @@ window.App = window.App || {};
       }
     }
 
-    /** Otra bobina de la misma máquina: solo se limpian los kilos. */
+    /** Otra bobina de la misma máquina: solo se limpian kilos y metros. */
     function otraBobina() {
       setCreada(null);
       setImpresion(null);
       setKilos("");
+      setMetros("");
       setObservaciones("");
       setError("");
     }
@@ -222,7 +205,11 @@ window.App = window.App || {};
               {creada.numero_bobina}
             </p>
             <p style={{ margin: 0, fontSize: 19 }}>
-              {window.App.bobinas.medida(creada)} · {window.App.zpl.kilosLegibles(creada.kilos)} kg
+              {window.App.bobinas.medida(creada)}
+            </p>
+            <p style={{ margin: "2px 0", fontSize: 19, fontWeight: 700 }}>
+              {window.App.zpl.kilosLegibles(creada.kilos)} kg
+              {creada.metros ? ` · ${window.App.zpl.kilosLegibles(creada.metros)} m` : ""}
             </p>
             <p style={{ margin: "2px 0 10px", color: "var(--tinta-suave)" }}>
               Máquina {window.App.bobinas.numeroMaquina(maquina)} · turno {creada.turno}
@@ -279,13 +266,24 @@ window.App = window.App || {};
     }
 
     // --- Carga ---
+    const detalle = corrida ? window.App.bobinas.materialYColor(corrida) : "";
+    const aditivos = corrida ? window.App.bobinas.aditivosDeCorrida(corrida) : "";
+
     return (
       <div>
         <div className="panel">
           <h1>🧵 Nueva bobina</h1>
           <window.App.Aviso tipo="error">{error}</window.App.Aviso>
 
-          <label style={{ display: "block", marginBottom: 8, fontSize: 14, fontWeight: 600, color: "var(--tinta-suave)" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: 8,
+              fontSize: 14,
+              fontWeight: 600,
+              color: "var(--tinta-suave)",
+            }}
+          >
             Máquina
           </label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -312,7 +310,7 @@ window.App = window.App || {};
                   {window.App.bobinas.numeroMaquina(m)}
                   {!m.corrida && (
                     <span
-                      title="Sin medida cargada"
+                      title="Sin producto cargado"
                       style={{
                         position: "absolute",
                         top: 4,
@@ -337,7 +335,7 @@ window.App = window.App || {};
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "center",
+                  alignItems: "flex-start",
                   flexWrap: "wrap",
                   gap: 10,
                 }}
@@ -349,94 +347,105 @@ window.App = window.App || {};
                   <p style={{ margin: 0, fontSize: 26, fontWeight: 800 }}>
                     {corrida ? window.App.bobinas.medida(corrida) : "sin definir"}
                   </p>
+                  {detalle && (
+                    <p style={{ margin: 0, fontSize: 18, color: "var(--tinta-suave)" }}>
+                      {detalle}
+                    </p>
+                  )}
+                  {aditivos && (
+                    <p style={{ margin: "4px 0 0", fontSize: 16, color: "var(--acento)", fontWeight: 600 }}>
+                      Lleva: {aditivos}
+                    </p>
+                  )}
+                  {corrida && corrida.observaciones && (
+                    <p style={{ margin: "2px 0 0", fontSize: 14, color: "var(--tinta-tenue)" }}>
+                      {corrida.observaciones}
+                    </p>
+                  )}
                 </div>
-                {!cambiandoMedida && (
-                  <button className="boton chico secundario" onClick={() => setCambiandoMedida(true)}>
-                    Cambiar medida
+                {!editandoProducto && (
+                  <button
+                    className="boton chico secundario"
+                    onClick={() => setEditandoProducto(true)}
+                  >
+                    Cambiar producto
                   </button>
                 )}
               </div>
 
-              {cambiandoMedida && (
-                <div style={{ marginTop: 14 }}>
-                  <p className="subtitulo">
+              {editandoProducto && (
+                <>
+                  <p className="subtitulo" style={{ marginTop: 14, marginBottom: 0 }}>
                     Esto cambia lo que está produciendo la máquina, no solo esta bobina.
                   </p>
-                  <div className="fila">
-                    <div className="campo">
-                      <label>Ancho (cm)</label>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        value={ancho}
-                        onChange={(e) => setAncho(e.target.value)}
-                        placeholder="45"
-                      />
-                    </div>
-                    <div className="campo">
-                      <label>Micrones</label>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        value={micrones}
-                        onChange={(e) => setMicrones(e.target.value)}
-                        placeholder="40"
-                      />
-                    </div>
-                    <div className="campo" style={{ flex: "0 0 auto" }}>
-                      <label>&nbsp;</label>
-                      <button className="boton" onClick={guardarMedida}>
-                        Guardar medida
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  <window.App.EditorCorrida
+                    maquina={maquina}
+                    alGuardar={async () => {
+                      setEditandoProducto(false);
+                      await cargarMaquinas();
+                    }}
+                    alCancelar={corrida ? () => setEditandoProducto(false) : null}
+                  />
+                </>
               )}
             </div>
 
-            <div className="panel">
-              <div className="fila">
-                <div className="campo">
-                  <label>Operario</label>
-                  <select value={operarioId} onChange={(e) => setOperarioId(e.target.value)}>
-                    <option value="">Elegir…</option>
-                    {operarios.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.nombre} ({o.iniciales})
-                      </option>
-                    ))}
-                  </select>
+            {!editandoProducto && (
+              <div className="panel">
+                <div className="fila">
+                  <div className="campo">
+                    <label>Operario</label>
+                    <select value={operarioId} onChange={(e) => setOperarioId(e.target.value)}>
+                      <option value="">Elegir…</option>
+                      {operarios.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.nombre} ({o.iniciales})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="campo">
+                    <label>Kilos *</label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      value={kilos}
+                      onChange={(e) => setKilos(e.target.value)}
+                      placeholder="0"
+                      style={{ fontSize: 26, fontWeight: 700, minHeight: 62 }}
+                    />
+                  </div>
+
+                  <div className="campo">
+                    <label>Metros</label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      value={metros}
+                      onChange={(e) => setMetros(e.target.value)}
+                      placeholder="Opcional"
+                      style={{ fontSize: 26, fontWeight: 700, minHeight: 62 }}
+                    />
+                  </div>
                 </div>
 
                 <div className="campo">
-                  <label>Kilos</label>
+                  <label>Observaciones de esta bobina</label>
                   <input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    value={kilos}
-                    onChange={(e) => setKilos(e.target.value)}
-                    placeholder="0"
-                    style={{ fontSize: 26, fontWeight: 700, minHeight: 62 }}
+                    value={observaciones}
+                    onChange={(e) => setObservaciones(e.target.value)}
+                    placeholder="Opcional"
                   />
                 </div>
-              </div>
 
-              <div className="campo">
-                <label>Observaciones</label>
-                <input
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  placeholder="Opcional"
-                />
+                <button className="boton ancho" onClick={crear} disabled={guardando}>
+                  {guardando ? "Creando…" : "Crear e imprimir"}
+                </button>
               </div>
-
-              <button className="boton ancho" onClick={crear} disabled={guardando}>
-                {guardando ? "Creando…" : "Crear e imprimir"}
-              </button>
-            </div>
+            )}
           </>
         )}
       </div>

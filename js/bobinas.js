@@ -8,9 +8,17 @@ window.App = window.App || {};
   const db = () => window.App.db;
 
   const CAMPOS_LISTA =
-    "id, numero_bobina, ancho_cm, micrones, kilos, turno, fecha, hora," +
-    " fecha_produccion, estado_impresion, creado_en," +
-    " maquinas(nombre, numero), operarios(nombre, iniciales)";
+    "id, numero_bobina, numero_en_maquina, ancho_cm, micrones, ancho_fuelle_cm," +
+    " kilos, metros, aditivos_texto, turno, fecha, hora, fecha_produccion," +
+    " estado_impresion, creado_en," +
+    " maquinas(nombre, numero), operarios(nombre, iniciales)," +
+    " materiales(nombre), colores(nombre)";
+
+  // Todo lo que define el producto que está corriendo una máquina.
+  const CAMPOS_CORRIDA =
+    "id, maquina_id, ancho_cm, micrones, ancho_fuelle_cm, observaciones, iniciada_en," +
+    " material_id, color_id, materiales(nombre), colores(nombre)," +
+    " corridas_aditivos(id, gramos_por_kilo, aditivo_id, aditivos(nombre, tipo))";
 
   /**
    * Las máquinas con su corrida activa: qué está produciendo cada una ahora.
@@ -22,10 +30,7 @@ window.App = window.App || {};
   async function maquinasConCorrida() {
     const [{ data: maquinas, error: e1 }, { data: corridas, error: e2 }] = await Promise.all([
       db().from("maquinas").select("id, nombre, numero").eq("activo", true),
-      db()
-        .from("corridas_maquina")
-        .select("id, maquina_id, ancho_cm, micrones, iniciada_en, observaciones")
-        .is("finalizada_en", null),
+      db().from("corridas_maquina").select(CAMPOS_CORRIDA).is("finalizada_en", null),
     ]);
 
     if (e1) throw new Error(window.App.ui.mensajeDeError(e1));
@@ -43,26 +48,49 @@ window.App = window.App || {};
       });
   }
 
-  /** Define qué está produciendo una máquina. Cierra la corrida anterior si cambió. */
-  async function definirCorrida(maquinaId, anchoCm, micrones, observaciones) {
+  /** Define qué está produciendo una máquina. Cierra la anterior si cambió algo. */
+  async function definirCorrida({
+    maquinaId,
+    anchoCm,
+    micrones,
+    anchoFuelleCm,
+    materialId,
+    colorId,
+    observaciones,
+  }) {
     const { data, error } = await db().rpc("definir_corrida", {
       p_maquina_id: maquinaId,
       p_ancho_cm: anchoCm,
       p_micrones: micrones,
+      p_ancho_fuelle_cm: anchoFuelleCm === undefined || anchoFuelleCm === "" ? null : anchoFuelleCm,
+      p_material_id: materialId || null,
+      p_color_id: colorId || null,
       p_observaciones: observaciones || null,
     });
     if (error) throw new Error(window.App.ui.mensajeDeError(error));
     return data;
   }
 
-  /** Crea la bobina. Sin ancho ni micrones, los toma de la corrida de esa máquina. */
-  async function crear({ maquinaId, operarioId, kilos, anchoCm, micrones, observaciones }) {
+  /** Reemplaza la lista completa de aditivos de una corrida. */
+  async function definirAditivos(corridaId, lista) {
+    const { data, error } = await db().rpc("definir_aditivos_corrida", {
+      p_corrida_id: corridaId,
+      p_aditivos: (lista || []).map((a) => ({
+        aditivo_id: a.aditivoId,
+        gramos_por_kilo: a.gramosPorKilo,
+      })),
+    });
+    if (error) throw new Error(window.App.ui.mensajeDeError(error));
+    return data;
+  }
+
+  /** Crea la bobina. La medida y el detalle salen de la corrida de esa máquina. */
+  async function crear({ maquinaId, operarioId, kilos, metros, observaciones }) {
     const { data, error } = await db().rpc("crear_bobina", {
       p_maquina_id: maquinaId,
       p_operario_id: operarioId,
       p_kilos: kilos,
-      p_ancho_cm: anchoCm === undefined ? null : anchoCm,
-      p_micrones: micrones === undefined ? null : micrones,
+      p_metros: metros === undefined || metros === "" ? null : metros,
       p_observaciones: observaciones || null,
     });
     if (error) throw new Error(window.App.ui.mensajeDeError(error));
@@ -90,6 +118,7 @@ window.App = window.App || {};
       .from("bobinas")
       .select(
         "*, maquinas(nombre, numero), operarios(nombre, iniciales)," +
+          " materiales(nombre), colores(nombre)," +
           " usuarios!bobinas_creado_por_fkey(nombre)",
       )
       .eq("id", id)
@@ -118,13 +147,55 @@ window.App = window.App || {};
     return data || [];
   }
 
-  /** "45 cm · 40 µ" */
-  function medida(bobinaOCorrida) {
-    if (!bobinaOCorrida) return "—";
-    return window.App.zplBobina.medidaLegible(
-      bobinaOCorrida.ancho_cm,
-      bobinaOCorrida.micrones,
-    );
+  /** Los catálogos que se eligen al definir una corrida. */
+  async function catalogos() {
+    const [materiales, colores, aditivos] = await Promise.all([
+      db().from("materiales").select("id, nombre").eq("activo", true).order("nombre"),
+      db().from("colores").select("id, nombre").eq("activo", true).order("nombre"),
+      db().from("aditivos").select("id, nombre, tipo").eq("activo", true).order("nombre"),
+    ]);
+
+    const fallo = [materiales, colores, aditivos].find((r) => r.error);
+    if (fallo) throw new Error(window.App.ui.mensajeDeError(fallo.error));
+
+    return {
+      materiales: materiales.data || [],
+      colores: colores.data || [],
+      aditivos: aditivos.data || [],
+    };
+  }
+
+  /* --- Textos para pantalla ------------------------------------------- */
+
+  /** "45 cm · fuelle 8 · 40 µ" (el fuelle solo si lleva). */
+  function medida(x) {
+    if (!x) return "—";
+    const k = window.App.zpl.kilosLegibles;
+    const partes = [`${k(x.ancho_cm)} cm`];
+    if (x.ancho_fuelle_cm) partes.push(`fuelle ${k(x.ancho_fuelle_cm)}`);
+    partes.push(`${k(x.micrones)} µ`);
+    return partes.join(" · ");
+  }
+
+  /** "BD · Transparente", con lo que haya. */
+  function materialYColor(x) {
+    if (!x) return "";
+    const partes = [];
+    if (x.materiales && x.materiales.nombre) partes.push(x.materiales.nombre);
+    if (x.colores && x.colores.nombre) partes.push(x.colores.nombre);
+    return partes.join(" · ");
+  }
+
+  /** "Master de color 20 g/kg · UV 10 g/kg" desde una corrida ya cargada. */
+  function aditivosDeCorrida(corrida) {
+    if (!corrida || !corrida.corridas_aditivos || corrida.corridas_aditivos.length === 0) {
+      return "";
+    }
+    const k = window.App.zpl.kilosLegibles;
+    return corrida.corridas_aditivos
+      .map((ca) => `${ca.aditivos ? ca.aditivos.nombre : "?"} ${k(ca.gramos_por_kilo)} g/kg`)
+      .sort()
+      .join(" · ");
   }
 
   /** "06" a partir del número de máquina. */
@@ -138,11 +209,15 @@ window.App = window.App || {};
   window.App.bobinas = {
     maquinasConCorrida,
     definirCorrida,
+    definirAditivos,
     crear,
     buscar,
     detalle,
     deLaJornada,
+    catalogos,
     medida,
+    materialYColor,
+    aditivosDeCorrida,
     numeroMaquina,
   };
 })();

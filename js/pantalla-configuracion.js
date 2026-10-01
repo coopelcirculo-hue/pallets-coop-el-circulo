@@ -306,6 +306,36 @@
         />
 
         <Abm
+          titulo="Materiales"
+          descripcion="Los que usan en planta. Van como lista para que el mismo material no termine escrito de tres formas distintas y después se puedan sumar los kilos por material."
+          tabla="materiales"
+          campos={[{ nombre: "nombre", etiqueta: "Nombre", tipo: "texto", requerido: true }]}
+        />
+
+        <Abm
+          titulo="Colores"
+          tabla="colores"
+          campos={[{ nombre: "nombre", etiqueta: "Nombre", tipo: "texto", requerido: true }]}
+        />
+
+        <Abm
+          titulo="Aditivos"
+          descripcion="Master de color, protección UV, aditivos y cargas. La dosis en gramos por kilo se carga después en cada máquina, porque cambia según lo que esté produciendo."
+          tabla="aditivos"
+          campos={[
+            { nombre: "nombre", etiqueta: "Nombre", tipo: "texto", requerido: true },
+            {
+              nombre: "tipo",
+              etiqueta: "Tipo",
+              tipo: "select",
+              opciones: ["master", "uv", "aditivo", "carga"],
+              porDefecto: "aditivo",
+              requerido: true,
+            },
+          ]}
+        />
+
+        <Abm
           titulo="Operarios"
           descripcion="Las iniciales son las que salen impresas en la etiqueta."
           tabla="operarios"

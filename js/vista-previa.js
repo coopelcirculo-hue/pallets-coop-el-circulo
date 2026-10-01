@@ -78,13 +78,54 @@ window.App = window.App || {};
         <p style={{ fontSize: 13, color: "var(--tinta-tenue)", marginTop: 6 }}>
           {disenio.ancho} × {disenio.alto} mm · {disenio.dpi} dpi · contenido{" "}
           {disenio.altoUsado.toFixed(0)} mm
+          {disenio.nivelTexto && ` · versión ${disenio.nivelTexto}`}
+          {disenio.escala && disenio.escala < 1 && ` (letra al ${Math.round(disenio.escala * 100)}%)`}
         </p>
 
-        {!disenio.entra && (
+        {/* No entra a lo alto */}
+        {disenio.entraAlto === false && (
           <div className="aviso error">
             El contenido ocupa {disenio.altoUsado.toFixed(0)} mm y la etiqueta tiene{" "}
-            {disenio.alto} mm: lo de abajo se va a cortar. Usá una etiqueta más larga o
-            cargá menos medidas por pallet.
+            {disenio.alto} mm: lo de abajo se va a cortar. Hace falta una etiqueta más larga.
+          </div>
+        )}
+
+        {/* No entra a lo ancho: es el caso que pasa desapercibido, porque en
+            el papel se ve "lleno" pero el final de cada renglón falta. */}
+        {disenio.desbordan && disenio.desbordan.length > 0 && (
+          <div className="aviso error">
+            La etiqueta es muy angosta: estos textos se van a imprimir cortados por el costado
+            — {disenio.desbordan.slice(0, 3).join(" · ")}
+            {disenio.desbordan.length > 3 && ` y ${disenio.desbordan.length - 3} más`}. Hace
+            falta una etiqueta más ancha que {disenio.ancho} mm.
+          </div>
+        )}
+
+        {/* Entra, pero apretado */}
+        {disenio.entra && disenio.letraChica && (
+          <div className="aviso atencion">
+            Entra, pero la letra más chica queda en {disenio.letraMinima.toFixed(1)} mm. Se
+            imprime, aunque va a costar leerla de lejos. Con una etiqueta un poco más grande
+            se vería bastante mejor.
+          </div>
+        )}
+
+        {/* Cuando hubo que sacar datos para que entrara */}
+        {disenio.entra && disenio.nivel > 0 && (
+          <div className="aviso" style={{ background: "var(--fondo)" }}>
+            Para que entrara se dejó afuera{" "}
+            {disenio.nivel === 1
+              ? "la marca de arriba y el pie."
+              : "la marca, el pie, la fecha y los rótulos."}{" "}
+            Los datos de la bobina están todos.
+          </div>
+        )}
+
+        {/* El pallet usa el mismo componente y no tiene niveles. */}
+        {disenio.nivelTexto === undefined && !disenio.entra && (
+          <div className="aviso error">
+            El contenido ocupa {disenio.altoUsado.toFixed(0)} mm y la etiqueta tiene{" "}
+            {disenio.alto} mm: lo de abajo se va a cortar.
           </div>
         )}
       </div>

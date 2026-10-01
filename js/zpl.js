@@ -50,6 +50,32 @@ window.App = window.App || {};
     return Math.round((mm * dpi) / 25.4);
   }
 
+  /**
+   * Ancho aproximado de un texto, en milímetros.
+   *
+   * La fuente escalable de la Zebra (font 0) tiene los caracteres más o menos
+   * a 0,6 de su altura. Es una estimación: se prefiere errar por exceso, que
+   * achica el texto de más, antes que por defecto, que lo deja cortado.
+   */
+  function anchoEstimado(texto, altura) {
+    return String(texto).length * altura * 0.6;
+  }
+
+  /**
+   * Devuelve la altura de letra más grande con la que el texto entra en el
+   * ancho disponible.
+   *
+   * Hace falta porque la etiqueta tiene un ancho fijo y los datos no: una
+   * medida con fuelle ("45 cm · F 11.5 · 14 µ") es mucho más larga que una
+   * sin él, y sin esto el final se imprime cortado.
+   */
+  function alturaQueEntra(texto, alturaDeseada, anchoDisponible, alturaMinima) {
+    const estimado = anchoEstimado(texto, alturaDeseada);
+    if (estimado <= anchoDisponible) return alturaDeseada;
+    const ajustada = (alturaDeseada * anchoDisponible) / estimado;
+    return Math.max(alturaMinima || 2.5, ajustada);
+  }
+
   /** "2026-07-24" → "24/07/2026" */
   function fechaLegible(fecha) {
     if (!fecha) return "";
@@ -269,6 +295,8 @@ window.App = window.App || {};
   window.App.zpl = {
     D,
     mmAPuntos,
+    anchoEstimado,
+    alturaQueEntra,
     calcularDisenio,
     aZpl,
     datosDeEtiqueta,

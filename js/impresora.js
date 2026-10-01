@@ -383,7 +383,7 @@ window.App = window.App || {};
     let zpl, disenio;
     if (esReimpresion && bobina.zpl_generado) {
       zpl = bobina.zpl_generado;
-      disenio = window.App.zplBobina.calcularDisenioBobina(datos, formato);
+      disenio = window.App.zplBobina.mejorDisenio(datos, formato);
     } else {
       const generado = window.App.zplBobina.generar(datos, formato);
       zpl = generado.zpl;

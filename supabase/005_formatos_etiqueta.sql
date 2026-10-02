@@ -75,9 +75,13 @@ create policy formatos_autenticado on formatos_etiqueta
 --  tienen en planta, desde la pantalla de Configuración.
 -- ----------------------------------------------------------------------------
 
-insert into formatos_etiqueta (nombre, ancho_mm, alto_mm, dpi, predeterminado) values
-  ('Grande 100x150', 100, 150, 203, true),
-  ('Chica 100x50',   100,  50, 203, false)
+-- No se nombra la columna dpi a propósito: el script 008 la saca de acá y la
+-- pasa a la configuración de la impresora. Sin nombrarla, este insert anda
+-- igual antes y después de esa migración, y el script se puede repetir
+-- siempre. Al correrlo por primera vez toma el valor por defecto (203).
+insert into formatos_etiqueta (nombre, ancho_mm, alto_mm, predeterminado) values
+  ('Grande 100x150', 100, 150, true),
+  ('Chica 100x50',   100,  50, false)
 on conflict do nothing;
 
-select nombre, ancho_mm, alto_mm, dpi, predeterminado from formatos_etiqueta order by nombre;
+select nombre, ancho_mm, alto_mm, predeterminado from formatos_etiqueta order by nombre;

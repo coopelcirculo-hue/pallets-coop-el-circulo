@@ -90,6 +90,13 @@ window.App = window.App || {};
           adentro de esa app, y desde ahí este sistema la usa solo.
         </div>
 
+        <div className="aviso error">
+          <strong>Emparejar la impresora en el Bluetooth de Android no alcanza.</strong> Esta
+          app no mira el Bluetooth del sistema: le pregunta a Browser Print. La impresora
+          tiene que estar agregada <em>adentro de Browser Print</em> y marcada como
+          predeterminada, aunque ya aparezca emparejada en los ajustes de la tablet.
+        </div>
+
         <pre
           style={{
             background: "var(--fondo)",
@@ -146,9 +153,22 @@ Zebra ZD421`}</pre>
               marcada, este sistema no sabe a cuál mandarle y no imprime.
             </Paso>
 
-            <Paso numero="5" titulo="Probá acá abajo">
+            <Paso numero="5" titulo="Aceptá el certificado (una sola vez)">
+              Este es el paso invisible que hace que todo parezca roto. Esta página es segura
+              (https) y Browser Print usa un certificado propio que Chrome no conoce, así que
+              le corta la comunicación <em>sin avisar nada</em>. Abrí{" "}
+              <a href="https://127.0.0.1:9101" target="_blank" rel="noopener noreferrer">
+                https://127.0.0.1:9101
+              </a>{" "}
+              en la misma tablet, tocá <strong>Configuración avanzada</strong> →{" "}
+              <strong>Acceder a 127.0.0.1 (no seguro)</strong>, y si pregunta si lo agregás
+              como host aceptado, decile que sí.
+            </Paso>
+
+            <Paso numero="6" titulo="Probá acá abajo">
               Volvé a esta pantalla y tocá <strong>Probar e imprimir una etiqueta</strong>. Te
-              va a decir con tildes y cruces en qué paso está fallando.
+              va a decir con tildes y cruces en qué paso está fallando, y qué pasó con cada
+              puerto.
             </Paso>
           </div>
         )}

@@ -100,9 +100,21 @@ window.App = window.App || {};
           } else {
             pasos.push({
               ok: false,
-              texto:
-                "Browser Print no responde. Revisá que esté instalado y abierto, que entres con Chrome, y que la impresora esté agregada (por red o por Bluetooth).",
+              texto: "Browser Print no responde en este dispositivo.",
             });
+
+            // Se muestra qué pasó con cada puerto: no es lo mismo que la app
+            // no esté, a que esté y Chrome le corte por el certificado.
+            window.App.impresora.ultimosIntentos().forEach((i) => {
+              pasos.push({ ok: false, detalle: true, texto: `${i.base} → ${i.estado}` });
+            });
+
+            setEstado({
+              pasos,
+              resumen: "Browser Print no está disponible",
+              mostrarCertificado: true,
+            });
+            return;
           }
 
           setEstado({ pasos, resumen: "Browser Print no está disponible" });
@@ -177,15 +189,61 @@ window.App = window.App || {};
                     display: "flex",
                     gap: 10,
                     alignItems: "flex-start",
-                    padding: "8px 0",
-                    borderBottom: "1px solid var(--borde)",
+                    padding: p.detalle ? "2px 0 2px 26px" : "8px 0",
+                    borderBottom: p.detalle ? "none" : "1px solid var(--borde)",
+                    fontSize: p.detalle ? 13 : undefined,
+                    color: p.detalle ? "var(--tinta-suave)" : undefined,
                   }}
                 >
-                  <span aria-hidden>{p.ok ? "✅" : "❌"}</span>
-                  <span style={{ color: p.ok ? "var(--tinta)" : "var(--error)" }}>{p.texto}</span>
+                  {!p.detalle && <span aria-hidden>{p.ok ? "✅" : "❌"}</span>}
+                  <span
+                    style={{
+                      color: p.detalle
+                        ? "var(--tinta-suave)"
+                        : p.ok
+                          ? "var(--tinta)"
+                          : "var(--error)",
+                    }}
+                  >
+                    {p.texto}
+                  </span>
                 </li>
               ))}
             </ul>
+
+            {/*
+              El motivo más común de que no responda: nuestra página es HTTPS
+              y Browser Print escucha con un certificado propio que Chrome no
+              conoce. Hay que aceptarlo UNA vez, abriéndolo directo.
+            */}
+            {estado.mostrarCertificado && (
+              <div className="aviso atencion" style={{ marginTop: 12 }}>
+                <p style={{ margin: "0 0 8px" }}>
+                  <strong>Lo más probable: falta aceptar el certificado.</strong> Esta página
+                  es segura (https) y Browser Print usa un certificado propio que Chrome no
+                  conoce, así que corta la comunicación sin avisar.
+                </p>
+                <p style={{ margin: "0 0 10px" }}>
+                  Abrí este link en la misma tablet, tocá <strong>Configuración avanzada</strong>{" "}
+                  → <strong>Acceder a 127.0.0.1 (no seguro)</strong>, y si pregunta si querés
+                  agregarlo como host aceptado, decile que sí. Después volvé acá y probá de
+                  nuevo.
+                </p>
+                <a
+                  className="boton"
+                  href="https://127.0.0.1:9101"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "inline-block", textDecoration: "none", lineHeight: "50px" }}
+                >
+                  Abrir https://127.0.0.1:9101
+                </a>
+                <p style={{ margin: "10px 0 0", fontSize: 14 }}>
+                  Si esa página tampoco abre, entonces Browser Print no está corriendo:
+                  abrilo desde el menú de aplicaciones y dejalo abierto una vez.
+                </p>
+              </div>
+            )}
 
             {estado.zpl && (
               <button

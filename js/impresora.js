@@ -65,14 +65,34 @@ window.App = window.App || {};
     return memoria;
   }
 
+  /*
+    Qué pasó con cada puerto en el último intento. Sirve para el diagnóstico:
+    "no responde" puede ser que Browser Print no esté, o que esté y Chrome le
+    corte la comunicación por el certificado. Son problemas distintos con
+    soluciones distintas, y antes se veían igual.
+  */
+  let intentos = [];
+
+  function ultimosIntentos() {
+    return intentos.slice();
+  }
+
   async function detectar() {
+    intentos = [];
     for (const base of PUERTOS) {
       try {
-        const r = await traer(base + "/default?type=printer", { method: "GET" }, 2000);
-        if (!r.ok) continue;
+        const r = await traer(base + "/default?type=printer", { method: "GET" }, 2500);
+
+        if (!r.ok) {
+          intentos.push({ base, estado: "respondió " + r.status });
+          continue;
+        }
 
         const texto = (await r.text()).trim();
-        if (!texto) continue;
+        if (!texto) {
+          intentos.push({ base, estado: "contesta, pero sin impresora predeterminada" });
+          continue;
+        }
 
         // Según la versión devuelve JSON o el nombre pelado.
         let dispositivo;
@@ -81,9 +101,14 @@ window.App = window.App || {};
         } catch {
           dispositivo = { name: texto, deviceType: "printer", connection: "network" };
         }
+
+        intentos.push({ base, estado: "OK", ok: true });
         return { base, dispositivo };
-      } catch {
-        // Ese puerto no contesta: se prueba el siguiente.
+      } catch (e) {
+        intentos.push({
+          base,
+          estado: e.name === "AbortError" ? "no contestó a tiempo" : "no se pudo conectar",
+        });
       }
     }
     return null;
@@ -416,8 +441,10 @@ window.App = window.App || {};
   }
 
   window.App.impresora = {
+    PUERTOS,
     buscarImpresora,
     listarImpresoras,
+    ultimosIntentos,
     olvidarDeteccion,
     datosParaEtiquetaBobina,
     imprimirBobina,

@@ -30,7 +30,33 @@ window.App = window.App || {};
   const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
   /** fetch con límite de tiempo, para no quedarse colgado si no hay nadie. */
-  async function traer(url, opciones, milisegundos) {
+  async function traer(url, opciones = {}, milisegundos) {
+  const cancelador = new AbortController();
+  const reloj = setTimeout(() => cancelador.abort(), milisegundos || 5000);
+
+  try {
+    return await fetch(url, {
+      ...opciones,
+      signal: cancelador.signal,
+      targetAddressSpace: "loopback"
+    });
+  } finally {
+    clearTimeout(reloj);
+  }
+  }async function traer(url, opciones = {}, milisegundos) {
+  const cancelador = new AbortController();
+  const reloj = setTimeout(() => cancelador.abort(), milisegundos || 5000);
+
+  try {
+    return await fetch(url, {
+      ...opciones,
+      signal: cancelador.signal,
+      targetAddressSpace: "loopback"
+    });
+  } finally {
+    clearTimeout(reloj);
+  }
+  } {
     const cancelador = new AbortController();
     const reloj = setTimeout(() => cancelador.abort(), milisegundos || 2500);
     try {

@@ -43,10 +43,6 @@ window.App = window.App || {};
   } finally {
     clearTimeout(reloj);
   }
-  }async function traer(url, opciones = {}, milisegundos) {
-  const cancelador = new AbortController();
-  const reloj = setTimeout(() => cancelador.abort(), milisegundos || 5000);
-
   try {
     return await fetch(url, {
       ...opciones,

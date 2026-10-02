@@ -154,6 +154,7 @@ window.App = window.App || {};
           mensaje: r.mensaje,
           zpl: r.zpl,
           disenio: r.disenio,
+          descargado: r.descargado,
         });
       } catch (e) {
         setImpresion({ estado: "error", mensaje: e.message });
@@ -216,7 +217,11 @@ window.App = window.App || {};
             </p>
 
             {estado === "enviando" && <span className="etiqueta-estado no">Imprimiendo…</span>}
-            {estado === "ok" && <span className="etiqueta-estado si">Impreso ✓</span>}
+            {estado === "ok" && (
+              <span className="etiqueta-estado si">
+                {impresion.descargado ? "Archivo descargado ✓" : "Impreso ✓"}
+              </span>
+            )}
             {estado === "error" && (
               <span
                 className="etiqueta-estado"
@@ -224,6 +229,13 @@ window.App = window.App || {};
               >
                 No se pudo imprimir
               </span>
+            )}
+
+            {estado === "ok" && impresion.descargado && (
+              <window.App.Aviso tipo="ok">
+                Se bajó <strong>{creada.numero_bobina}.zpl</strong>. Abrilo con Zebra Print
+                Connect y sale la etiqueta. Suele aparecer en las notificaciones de descarga.
+              </window.App.Aviso>
             )}
 
             {estado === "error" && (
@@ -237,6 +249,8 @@ window.App = window.App || {};
               <button className="boton" style={{ flex: 1 }} onClick={otraBobina}>
                 Otra bobina de la {window.App.bobinas.numeroMaquina(maquina)}
               </button>
+              {/* Siempre disponible, no solo cuando falla: si la descarga se
+                  perdió o hay que repetirla, está a mano. */}
               {impresion && impresion.zpl && (
                 <button
                   className="boton secundario"
@@ -244,7 +258,7 @@ window.App = window.App || {};
                     window.App.impresora.descargarZpl(impresion.zpl, creada.numero_bobina)
                   }
                 >
-                  Descargar .zpl
+                  {impresion.descargado ? "Descargar de nuevo" : "Descargar .zpl"}
                 </button>
               )}
               {estado === "error" && (
@@ -442,7 +456,11 @@ window.App = window.App || {};
                 </div>
 
                 <button className="boton ancho" onClick={crear} disabled={guardando}>
-                  {guardando ? "Creando…" : "Crear e imprimir"}
+                  {guardando
+                    ? "Creando…"
+                    : window.App.impresora.modoImpresion() === "descarga"
+                      ? "Crear y descargar etiqueta"
+                      : "Crear e imprimir"}
                 </button>
               </div>
             )}

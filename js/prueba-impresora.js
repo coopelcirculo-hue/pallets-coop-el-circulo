@@ -33,6 +33,74 @@ window.App = window.App || {};
     return window.App.zplBobina.generar(datos, formato);
   }
 
+  /**
+   * Cómo imprime ESTE dispositivo. Se guarda en la tablet, no en la base:
+   * depende de si acá anda Browser Print, no de la fábrica.
+   */
+  function ModoImpresion() {
+    const [modo, setModo] = useState(window.App.impresora.modoImpresion());
+
+    function cambiar(nuevo) {
+      window.App.impresora.setModoImpresion(nuevo);
+      setModo(nuevo);
+    }
+
+    const opcion = (valor, titulo, texto) => {
+      const elegida = modo === valor;
+      return (
+        <button
+          onClick={() => cambiar(valor)}
+          style={{
+            flex: "1 1 240px",
+            textAlign: "left",
+            padding: 14,
+            borderRadius: 12,
+            cursor: "pointer",
+            border: elegida ? "2px solid var(--acento)" : "1.5px solid var(--borde)",
+            background: elegida ? "var(--panel)" : "var(--fondo)",
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 700, color: "var(--tinta)" }}>
+            {elegida ? "● " : "○ "}
+            {titulo}
+          </p>
+          <p style={{ margin: "4px 0 0", fontSize: 14, color: "var(--tinta-suave)" }}>{texto}</p>
+        </button>
+      );
+    };
+
+    return (
+      <div className="panel">
+        <h2>Cómo imprime esta tablet</h2>
+        <p className="subtitulo">
+          Es una opción <strong>de este dispositivo</strong>, no de la fábrica: otra tablet
+          puede estar configurada distinto sin pisarse con esta.
+        </p>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {opcion(
+            "browser_print",
+            "Automático",
+            "Manda la etiqueta sola a la Zebra con Browser Print. Es lo ideal cuando funciona.",
+          )}
+          {opcion(
+            "descarga",
+            "Descargar el archivo",
+            "Baja un .zpl y lo abrís con Zebra Print Connect. Un toque más, pero anda siempre.",
+          )}
+        </div>
+
+        {modo === "descarga" && (
+          <window.App.Aviso tipo="ok">
+            En este modo el sistema ni intenta Browser Print: no hay que esperar a que falle,
+            y las bobinas no quedan marcadas con error. El botón de cargar bobina pasa a decir
+            “Crear y descargar etiqueta”.
+          </window.App.Aviso>
+        )}
+      </div>
+    );
+  }
+
   function PruebaImpresora() {
     const [estado, setEstado] = useState(null);
     const [probando, setProbando] = useState(false);
@@ -266,5 +334,6 @@ window.App = window.App || {};
     );
   }
 
+  window.App.ModoImpresion = ModoImpresion;
   window.App.PruebaImpresora = PruebaImpresora;
 })();

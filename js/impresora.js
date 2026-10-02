@@ -182,6 +182,33 @@ window.App = window.App || {};
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
 
+  /* =====================================================================
+     Modo de impresión de ESTE dispositivo.
+
+     Va en la tablet y no en la base a propósito: depende de si en este
+     equipo anda Browser Print, no de la fábrica. Una tablet puede imprimir
+     sola y otra bajar el archivo, sin pisarse.
+     ===================================================================== */
+
+  const CLAVE_MODO = "pallets_modo_impresion";
+
+  /** "browser_print" (automático) o "descarga" (bajar el .zpl a mano). */
+  function modoImpresion() {
+    try {
+      return localStorage.getItem(CLAVE_MODO) === "descarga" ? "descarga" : "browser_print";
+    } catch {
+      return "browser_print";
+    }
+  }
+
+  function setModoImpresion(modo) {
+    try {
+      localStorage.setItem(CLAVE_MODO, modo === "descarga" ? "descarga" : "browser_print");
+    } catch {
+      // Si el navegador no deja guardar, queda en automático.
+    }
+  }
+
   /** Descripción corta del equipo, para el registro de impresiones. */
   function nombreDispositivo() {
     const guardado = localStorage.getItem("pallets_nombre_dispositivo");
@@ -417,6 +444,24 @@ window.App = window.App || {};
 
     await cambiarEstadoBobina(bobinaId, "imprimiendo", zpl);
 
+    /*
+      Modo descarga: ni se intenta Browser Print. Se baja el archivo y listo.
+      Sin esto, cada bobina esperaba unos segundos a que Browser Print se
+      diera por vencido y quedaba marcada con error, llenando de alertas el
+      Inicio por algo que en realidad se imprimió bien con Print Connect.
+    */
+    if (modoImpresion() === "descarga") {
+      descargarZpl(zpl, bobina.numero_bobina);
+      await cambiarEstadoBobina(bobinaId, "impreso");
+      await registrarBobina(
+        bobinaId,
+        "ok",
+        "Archivo descargado para imprimir con Print Connect",
+        esReimpresion,
+      );
+      return { ok: true, zpl, disenio, descargado: true };
+    }
+
     if (config.reintentarDeteccion) olvidarDeteccion();
 
     let ultimoError = null;
@@ -442,6 +487,8 @@ window.App = window.App || {};
 
   window.App.impresora = {
     PUERTOS,
+    modoImpresion,
+    setModoImpresion,
     buscarImpresora,
     listarImpresoras,
     ultimosIntentos,

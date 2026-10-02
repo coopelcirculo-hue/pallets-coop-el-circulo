@@ -180,6 +180,7 @@ window.App = window.App || {};
           mensaje: r.mensaje,
           zpl: r.zpl,
           disenio: r.disenio,
+          descargado: r.descargado,
         });
         cargar();
       } catch (e) {
@@ -289,7 +290,13 @@ window.App = window.App || {};
             produciendo otra medida.
           </p>
 
-          {estadoImp === "ok" && <window.App.Aviso tipo="ok">Etiqueta enviada.</window.App.Aviso>}
+          {estadoImp === "ok" && (
+            <window.App.Aviso tipo="ok">
+              {impresion.descargado
+                ? `Se bajó ${bobina.numero_bobina}.zpl. Abrilo con Zebra Print Connect.`
+                : "Etiqueta enviada."}
+            </window.App.Aviso>
+          )}
           {estadoImp === "error" && (
             <window.App.Aviso tipo="atencion">
               No se pudo imprimir: {String(impresion.mensaje || "").replace(/\.\s*$/, "")}. Podés
@@ -303,7 +310,11 @@ window.App = window.App || {};
               onClick={() => reimprimir(false)}
               disabled={estadoImp === "enviando"}
             >
-              {estadoImp === "enviando" ? "Enviando…" : "Reimprimir etiqueta"}
+              {estadoImp === "enviando"
+                ? "Enviando…"
+                : window.App.impresora.modoImpresion() === "descarga"
+                  ? "Descargar la etiqueta otra vez"
+                  : "Reimprimir etiqueta"}
             </button>
             {impresion && impresion.zpl && (
               <button

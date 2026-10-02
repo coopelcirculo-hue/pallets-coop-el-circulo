@@ -275,6 +275,8 @@
 
         <Marca />
 
+        <window.App.ModoImpresion />
+
         <window.App.AyudaImpresora />
 
         <window.App.PruebaImpresora />

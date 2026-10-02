@@ -22,7 +22,7 @@ window.App = window.App || {};
 
 (function () {
   // Browser Print escucha en estos puertos. El 9100 es HTTP y el 9101 HTTPS.
-  const PUERTOS = ["http://127.0.0.1:9100", "https://127.0.0.1:9101"];
+  const PUERTOS = ["http://localhost:9100"];
 
   const INTENTOS = 3;
   const ESPERA_MS = 3000;

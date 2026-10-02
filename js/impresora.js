@@ -47,7 +47,6 @@ window.App = window.App || {};
 
   /*
     Memoria de si Browser Print está o no.
-  /*
 
     Importa para el uso diario: si la app no está instalada, cada consulta
     tarda un par de segundos en darse por vencida. Sin esta memoria, cada

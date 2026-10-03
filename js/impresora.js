@@ -21,8 +21,22 @@
 window.App = window.App || {};
 
 (function () {
-  // Browser Print escucha en estos puertos. El 9100 es HTTP y el 9101 HTTPS.
-  const PUERTOS = ["https://127.0.0.1:9101", "http://localhost:9100"];
+  /*
+    Browser Print escucha en la propia tablet. El 9101 es HTTPS y el 9100 HTTP.
+
+    El orden importa: nuestra página es HTTPS, así que el 9101 es el que le
+    corresponde y va primero. El 9100 queda de respaldo.
+
+    Va 127.0.0.1 y NO "localhost" a propósito: Browser Print abre el puerto en
+    IPv4, y en Android "localhost" puede resolver primero a ::1 (IPv6), donde
+    no hay nadie escuchando. Se deja igual una tercera opción con localhost por
+    si alguna versión lo abriera solo ahí.
+  */
+  const PUERTOS = [
+    "https://127.0.0.1:9101",
+    "http://127.0.0.1:9100",
+    "http://localhost:9100",
+  ];
 
   const INTENTOS = 3;
   const ESPERA_MS = 3000;
@@ -30,20 +44,53 @@ window.App = window.App || {};
   const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
   /** fetch con límite de tiempo, para no quedarse colgado si no hay nadie. */
-  async function traer(url, opciones = {}, milisegundos) {
-  const cancelador = new AbortController();
-  const reloj = setTimeout(() => cancelador.abort(), milisegundos || 5000);
+  async function traer(url, opciones, milisegundos) {
+    const cancelador = new AbortController();
+    const reloj = setTimeout(() => cancelador.abort(), milisegundos || 2500);
 
-  try {
-    return await fetch(url, {
-      ...opciones,
-      signal: cancelador.signal,
-      targetAddressSpace: "loopback"
-    });
+    try {
+      return await fetch(url, {
+        ...(opciones || {}),
+        signal: cancelador.signal,
+
+        /*
+          Chrome 141+ (y Firefox atrás) cerraron el acceso de los sitios de
+          internet a la red local. Esto le avisa al navegador, ANTES de salir,
+          que el destino es la propia máquina. Sin esto Chrome lo trata como
+          contenido inseguro y lo corta sin preguntar nada.
+
+          Los navegadores que no lo conocen ignoran la opción, así que no
+          rompe nada en los viejos.
+        */
+        targetAddressSpace: "loopback",
+      });
     } finally {
-    clearTimeout(reloj);
+      clearTimeout(reloj);
+    }
   }
-}
+
+  /*
+    Estado del permiso de red local de Chrome.
+
+    Importa para el diagnóstico: si Chrome bloqueó el permiso, el fetch falla
+    exactamente igual que si Browser Print no estuviera instalado, y son dos
+    problemas con soluciones distintas. Los navegadores que no tienen este
+    permiso devuelven null, que acá significa "no aplica".
+  */
+  async function permisoRedLocal() {
+    if (!navigator.permissions || !navigator.permissions.query) return null;
+
+    // El nombre cambió entre borradores de la especificación: se prueban todos.
+    for (const nombre of ["local-network-access", "loopback-network", "local-network"]) {
+      try {
+        const p = await navigator.permissions.query({ name: nombre });
+        if (p && p.state) return p.state; // "granted" | "denied" | "prompt"
+      } catch {
+        // Este navegador no conoce ese nombre: se prueba el siguiente.
+      }
+    }
+    return null;
+  }
 
   /*
     Memoria de si Browser Print está o no.
@@ -498,6 +545,7 @@ window.App = window.App || {};
     listarImpresoras,
     ultimosIntentos,
     olvidarDeteccion,
+    permisoRedLocal,
     datosParaEtiquetaBobina,
     imprimirBobina,
     enviarPorBrowserPrint,

@@ -113,6 +113,21 @@ window.App = window.App || {};
       setDisenio(null);
 
       const pasos = [];
+
+      /*
+        Se dispara la consulta a Browser Print ACÁ, en el primer renglón del
+        toque del botón, y recién más abajo se espera el resultado.
+
+        El motivo no es la velocidad: Chrome solo muestra el cartel de permiso
+        de red local mientras dura el "toque" del usuario, y eso vence en
+        segundos. Si primero se consultaba la base (como estaba antes), para
+        cuando le tocaba el turno a Browser Print el toque ya había vencido y
+        Chrome denegaba sin preguntar nada. Se veía igual que si la app no
+        estuviera instalada.
+      */
+      window.App.impresora.olvidarDeteccion();
+      const promesaImpresora = window.App.impresora.buscarImpresora();
+
       try {
         // Paso 1: ¿hay formato y configuración cargados?
         const [{ data: config }, { data: formato }] = await Promise.all([
@@ -147,8 +162,8 @@ window.App = window.App || {};
         }
 
         // Paso 2: ¿Browser Print está corriendo en este dispositivo?
-        window.App.impresora.olvidarDeteccion();
-        const encontrada = await window.App.impresora.buscarImpresora();
+        // La consulta ya salió arriba; acá solo se espera la respuesta.
+        const encontrada = await promesaImpresora;
 
         if (!encontrada) {
           // Puede ser que Browser Print no esté, o que esté pero sin ninguna
@@ -177,10 +192,36 @@ window.App = window.App || {};
               pasos.push({ ok: false, detalle: true, texto: `${i.base} → ${i.estado}` });
             });
 
+            /*
+              Chrome 141+ pide permiso para que un sitio de internet le hable a
+              la propia tablet. Si está denegado, el fetch falla IGUAL que si
+              Browser Print no estuviera: hay que distinguirlos o se pierde el
+              día buscando el problema en el lado equivocado.
+            */
+            const permiso = await window.App.impresora.permisoRedLocal();
+            if (permiso === "denied") {
+              pasos.push({
+                ok: false,
+                texto:
+                  "Chrome tiene BLOQUEADO el permiso de red local para este sitio. " +
+                  "Es la causa más probable de que no conteste: probá destrabarlo antes " +
+                  "de tocar nada en la impresora.",
+              });
+            } else if (permiso === "prompt") {
+              pasos.push({
+                ok: false,
+                detalle: true,
+                texto:
+                  "Chrome todavía no preguntó por el permiso de red local: " +
+                  "cuando aparezca el cartel, tocá Permitir.",
+              });
+            }
+
             setEstado({
               pasos,
               resumen: "Browser Print no está disponible",
               mostrarCertificado: true,
+              permisoRedLocal: permiso,
             });
             return;
           }
@@ -280,7 +321,28 @@ window.App = window.App || {};
             </ul>
 
             {/*
-              El motivo más común de que no responda: nuestra página es HTTPS
+              Si Chrome bloqueó el permiso de red local, esto va PRIMERO: no
+              tiene sentido pelearse con el certificado si Chrome ni siquiera
+              deja salir el pedido.
+            */}
+            {estado.permisoRedLocal === "denied" && (
+              <div className="aviso error" style={{ marginTop: 12 }}>
+                <p style={{ margin: "0 0 8px" }}>
+                  <strong>Chrome está bloqueando el acceso a la red local.</strong> Desde la
+                  versión 141, Chrome le pide permiso a cada sitio para hablarle a la propia
+                  tablet, y para este sitio quedó en “Bloqueado”.
+                </p>
+                <p style={{ margin: 0 }}>
+                  Tocá el <strong>candado</strong> (o el ícono a la izquierda de la dirección)
+                  arriba en la barra de Chrome → <strong>Permisos</strong> →{" "}
+                  <strong>Red local</strong> (o “Dispositivos de la red local”) y ponelo en{" "}
+                  <strong>Permitir</strong>. Después recargá la página y probá de nuevo.
+                </p>
+              </div>
+            )}
+
+            {/*
+              El otro motivo común de que no responda: nuestra página es HTTPS
               y Browser Print escucha con un certificado propio que Chrome no
               conoce. Hay que aceptarlo UNA vez, abriéndolo directo.
             */}

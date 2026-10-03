@@ -174,10 +174,11 @@ Zebra ZD421`}</pre>
               marcada, este sistema no sabe a cuál mandarle y no imprime.
             </Paso>
 
-            <Paso numero="6" titulo="Aceptá el certificado (una sola vez)">
-              Este es el paso invisible que hace que todo parezca roto. Esta página es segura
-              (https) y Browser Print usa un certificado propio que Chrome no conoce, así que
-              le corta la comunicación <em>sin avisar nada</em>. Abrí{" "}
+            <Paso numero="6" titulo="Aceptá el certificado (solo si hace falta)">
+              El sistema usa primero el puerto <strong>9100</strong>, que no pide ningún
+              certificado, así que lo más probable es que este paso ni te haga falta. Queda
+              por si tiene que caer al <strong>9101</strong>, que usa un certificado propio
+              que Chrome no conoce y corta la comunicación <em>sin avisar nada</em>. Abrí{" "}
               <a href="https://127.0.0.1:9101" target="_blank" rel="noopener noreferrer">
                 https://127.0.0.1:9101
               </a>{" "}
@@ -191,13 +192,19 @@ Zebra ZD421`}</pre>
               máquina. Es nuevo y no está en ningún manual de Zebra, pero rompe
               exactamente esta cadena.
             */}
-            <Paso numero="7" titulo="Permitile a Chrome hablar con la tablet">
+            <Paso numero="7" titulo="Permitile a Chrome hablar con la tablet · EL IMPORTANTE">
               Chrome 141 y posteriores le piden permiso a cada sitio para hablarle a la propia
-              tablet. La primera vez sale un cartel: tocá <strong>Permitir</strong>. Si ya le
-              diste Bloquear, o si el cartel nunca salió, tocá el <strong>candado</strong> a la
-              izquierda de la dirección → <strong>Permisos</strong> →{" "}
-              <strong>Red local</strong> y ponelo en <strong>Permitir</strong>. El diagnóstico
-              de acá abajo te avisa si es esto.
+              tablet, y <strong>sin ese permiso no hay nada que hacer</strong>: está probado
+              contra un Chrome real que, apenas se concede, la impresora contesta.
+              <br />
+              <br />
+              Cuando toques <strong>Probar e imprimir una etiqueta</strong> va a salir un
+              cartel preguntando si este sitio puede acceder a los dispositivos de tu red
+              local: tocá <strong>Permitir</strong>. No lo descartes — si lo descartás varias
+              veces, Chrome bloquea el sitio solo. Si ya quedó bloqueado, tocá el{" "}
+              <strong>candado</strong> a la izquierda de la dirección →{" "}
+              <strong>Permisos</strong> → <strong>Red local</strong> →{" "}
+              <strong>Permitir</strong>, y recargá.
             </Paso>
 
             <Paso numero="8" titulo="Probá acá abajo">

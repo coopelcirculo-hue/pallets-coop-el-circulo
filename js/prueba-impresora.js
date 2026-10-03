@@ -126,7 +126,7 @@ window.App = window.App || {};
         estuviera instalada.
       */
       window.App.impresora.olvidarDeteccion();
-      const promesaImpresora = window.App.impresora.buscarImpresora();
+      const promesaImpresora = window.App.impresora.buscarImpresora({ esperarPermiso: true });
 
       try {
         // Paso 1: ¿hay formato y configuración cargados?
@@ -288,6 +288,20 @@ window.App = window.App || {};
           {probando ? "Probando…" : "Probar e imprimir una etiqueta"}
         </button>
 
+        {/*
+          Este aviso tiene que estar MIENTRAS prueba, no después: el cartel de
+          Chrome aparece justo en ese momento y el operario tiene que saber que
+          lo está esperando. Si lo descarta, Chrome termina bloqueando el sitio.
+        */}
+        {probando && (
+          <window.App.Aviso tipo="atencion">
+            Si Chrome pregunta si este sitio puede acceder a los{" "}
+            <strong>dispositivos de tu red local</strong>, tocá{" "}
+            <strong>Permitir</strong>. Sin eso la impresora nunca va a contestar. La prueba
+            espera hasta que contestes.
+          </window.App.Aviso>
+        )}
+
         {estado && (
           <div style={{ marginTop: 16 }}>
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
@@ -349,15 +363,30 @@ window.App = window.App || {};
             {estado.mostrarCertificado && (
               <div className="aviso atencion" style={{ marginTop: 12 }}>
                 <p style={{ margin: "0 0 8px" }}>
-                  <strong>Lo más probable: falta aceptar el certificado.</strong> Esta página
-                  es segura (https) y Browser Print usa un certificado propio que Chrome no
-                  conoce, así que corta la comunicación sin avisar.
+                  <strong>Qué mirar, en este orden:</strong>
                 </p>
+                <ol style={{ margin: "0 0 10px", paddingLeft: 20 }}>
+                  <li>
+                    <strong>El permiso de red local de Chrome.</strong> Es el que corta el
+                    98% de las veces. Candado en la barra de direcciones →{" "}
+                    <strong>Permisos</strong> → <strong>Red local</strong> →{" "}
+                    <strong>Permitir</strong>.
+                  </li>
+                  <li>
+                    <strong>Que Browser Print esté abierto</strong> en la tablet, con la
+                    impresora marcada como <em>Default</em>.
+                  </li>
+                  <li>
+                    <strong>El certificado</strong>, solo si lo de arriba ya está. El sistema
+                    usa primero el puerto 9100, que no necesita certificado; el 9101 es de
+                    respaldo y ese sí lo pide.
+                  </li>
+                </ol>
                 <p style={{ margin: "0 0 10px" }}>
-                  Abrí este link en la misma tablet, tocá <strong>Configuración avanzada</strong>{" "}
-                  → <strong>Acceder a 127.0.0.1 (no seguro)</strong>, y si pregunta si querés
-                  agregarlo como host aceptado, decile que sí. Después volvé acá y probá de
-                  nuevo.
+                  Para el certificado: abrí este link en la misma tablet, tocá{" "}
+                  <strong>Configuración avanzada</strong> →{" "}
+                  <strong>Acceder a 127.0.0.1 (no seguro)</strong>, y si pregunta si querés
+                  agregarlo como host aceptado, decile que sí.
                 </p>
                 <a
                   className="boton"

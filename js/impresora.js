@@ -22,10 +22,20 @@ window.App = window.App || {};
 
 (function () {
   /*
-    Browser Print escucha en la propia tablet. El 9101 es HTTPS y el 9100 HTTP.
+    Browser Print escucha en la propia tablet. El 9100 es HTTP y el 9101 HTTPS.
 
-    El orden importa: nuestra página es HTTPS, así que el 9101 es el que le
-    corresponde y va primero. El 9100 queda de respaldo.
+    EL ORDEN ESTÁ MEDIDO, no elegido por gusto. Probado contra un Chrome 154
+    real, desde el sitio publicado, con un Browser Print que responde en los
+    dos puertos:
+
+      http://127.0.0.1:9100   → una sola traba: el permiso de red local.
+                                Con el permiso dado contesta "OK 200".
+      https://127.0.0.1:9101  → DOS trabas: primero el certificado propio
+                                (ERR_CERT_AUTHORITY_INVALID, corta antes de
+                                salir) y recién después el mismo permiso.
+
+    Por eso va primero el 9100: con targetAddressSpace el contenido mixto no
+    molesta, y así no hace falta aceptar ningún certificado a mano.
 
     Va 127.0.0.1 y NO "localhost" a propósito: Browser Print abre el puerto en
     IPv4, y en Android "localhost" puede resolver primero a ::1 (IPv6), donde
@@ -33,13 +43,30 @@ window.App = window.App || {};
     si alguna versión lo abriera solo ahí.
   */
   const PUERTOS = [
-    "https://127.0.0.1:9101",
     "http://127.0.0.1:9100",
+    "https://127.0.0.1:9101",
     "http://localhost:9100",
   ];
 
   const INTENTOS = 3;
   const ESPERA_MS = 3000;
+
+  /*
+    Dos tiempos de espera distintos, y la diferencia es grande a propósito.
+
+    ESPERA_NORMAL_MS: una vez que el permiso está resuelto, Browser Print
+    contesta en milisegundos. Si no contesta en 2,5 s es que no está.
+
+    ESPERA_CON_PERMISO_MS: la PRIMERA vez, Chrome muestra el cartel de "¿Dejar
+    que este sitio acceda a los dispositivos de tu red local?" y deja el pedido
+    esperando hasta que alguien conteste. Medido: el pedido se queda colgado
+    todo lo que uno lo deje. Con 2,5 s lo cortábamos nosotros antes de que el
+    operario llegara a leer el cartel, y Chrome cuenta ese corte como un
+    "descartado" — a los pocos descartes bloquea el sitio solo. O sea que la
+    app se estaba ganando el bloqueo sola. Por eso el primer intento espera.
+  */
+  const ESPERA_NORMAL_MS = 2500;
+  const ESPERA_CON_PERMISO_MS = 45000;
 
   const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -110,10 +137,14 @@ window.App = window.App || {};
   /**
    * Busca la impresora configurada en Browser Print.
    * Devuelve { base, dispositivo } o null si Browser Print no está.
+   *
+   * Con { esperarPermiso: true } le da tiempo al operario a contestar el
+   * cartel de permiso de Chrome. Se usa desde la pantalla de prueba, donde la
+   * persona está mirando. En el uso diario no, para no hacer esperar a nadie.
    */
-  async function buscarImpresora() {
+  async function buscarImpresora(opciones) {
     if (memoria !== null) return memoria;
-    memoria = await detectar();
+    memoria = await detectar(opciones && opciones.esperarPermiso);
     return memoria;
   }
 
@@ -129,11 +160,22 @@ window.App = window.App || {};
     return intentos.slice();
   }
 
-  async function detectar() {
+  async function detectar(esperarPermiso) {
     intentos = [];
+    let primero = true;
+
     for (const base of PUERTOS) {
+      /*
+        Solo el PRIMER puerto espera largo. El cartel del permiso sale una vez
+        sola: una vez contestado, los demás puertos resuelven al instante. Si
+        esperaran todos, una tablet sin Browser Print tardaría dos minutos en
+        darse por vencida.
+      */
+      const espera = esperarPermiso && primero ? ESPERA_CON_PERMISO_MS : ESPERA_NORMAL_MS;
+      primero = false;
+
       try {
-        const r = await traer(base + "/default?type=printer", { method: "GET" }, 2500);
+        const r = await traer(base + "/default?type=printer", { method: "GET" }, espera);
 
         if (!r.ok) {
           intentos.push({ base, estado: "respondió " + r.status });
